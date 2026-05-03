@@ -4,7 +4,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { ArrowRight, Mic, Trophy, Sparkles } from "lucide-react";
 
 const FEATURED: GameId = "flashmath";
-const SECONDARY: GameId[] = ["schulte", "reaction", "nback"];
+const SECONDARY: GameId[] = ["schulte", "reaction", "nback", "cards"];
 
 const Index = () => {
   const featured = GAMES[FEATURED];
@@ -81,7 +81,7 @@ const Index = () => {
               {SECONDARY.length} Modules
             </span>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {SECONDARY.map((id) => {
               const g = GAMES[id];
               return (

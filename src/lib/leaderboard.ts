@@ -4,7 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type GameId = "flashmath" | "schulte" | "reaction" | "nback";
+export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards";
 export type ScoreDirection = "lower" | "higher";
 export type Period = "weekly" | "all";
 
@@ -72,6 +72,16 @@ export const GAMES: Record<
     formatValue: (v) => `${Math.round(v)}%`,
     valueLabel: "命中",
     initial: "N",
+  },
+  cards: {
+    id: "cards",
+    name: "扑克记忆",
+    tagline: "Card Memory",
+    description: "随机洗一副 52 张扑克牌，记忆顺序后翻面互测。",
+    direction: "higher",
+    formatValue: (v) => `${Math.round(v)}`,
+    valueLabel: "得分",
+    initial: "C",
   },
 };
 

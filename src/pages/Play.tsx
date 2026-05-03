@@ -6,6 +6,7 @@ import { SchulteGame } from "@/components/games/SchulteGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
 import { FlashMathGame, type FlashCfg } from "@/components/games/FlashMathGame";
 import { NBackGame } from "@/components/games/NBackGame";
+import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { ProLeaderboard } from "@/components/ProLeaderboard";
 import { AccountMenu } from "@/components/AccountMenu";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const Play = () => {
     game.id === "schulte" ? `${schulteSize}x${schulteSize}` :
     game.id === "flashmath" ? `${flashCfg.count}q-${flashCfg.digits}d${flashCfg.includeSub ? "-sub" : ""}` :
     game.id === "nback" ? `${nbackCfg.n}-back-${nbackCfg.trials}` :
+    game.id === "cards" ? "deck52" :
     "default";
 
   return (
@@ -87,6 +89,7 @@ const Play = () => {
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
             {game.id === "flashmath" && <FlashMathGame onFinished={handleFinished} onCfgChange={setFlashCfg} />}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
+            {game.id === "cards" && <CardMemoryGame />}
           </div>
           <aside>
             <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
