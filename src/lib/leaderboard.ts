@@ -73,6 +73,16 @@ export const GAMES: Record<
     valueLabel: "命中",
     initial: "N",
   },
+  cards: {
+    id: "cards",
+    name: "扑克记忆",
+    tagline: "Card Memory",
+    description: "随机洗一副 52 张扑克牌，记忆顺序后翻面互测。",
+    direction: "higher",
+    formatValue: (v) => `${Math.round(v)}`,
+    valueLabel: "得分",
+    initial: "C",
+  },
 };
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
