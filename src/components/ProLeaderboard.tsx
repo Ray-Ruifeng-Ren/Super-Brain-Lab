@@ -1,60 +1,26 @@
+// Premium minimal leaderboard panel.
+// Cloud-backed via /lib/leaderboard async APIs.
+
 import { useEffect, useMemo, useState } from "react";
 import {
-  GAMES,
-  type GameId,
-  type Period,
-  formatRelative,
-  getLeaderboard,
-  getMyBest,
-  getMyHistory,
-  getPlayerName,
+  GAMES, type GameId, type Period, type ScoreRow,
+  formatRelative, getLeaderboard, getMyBest, getMyHistory,
 } from "@/lib/leaderboard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Crown, Medal, Trophy, TrendingUp, TrendingDown, Sparkles, History } from "lucide-react";
+import { TrendingUp, TrendingDown, History } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
-type Props = {
-  game: GameId;
-  mode: string;
-  refreshKey: number;
-};
+interface Props { game: GameId; mode: string; refreshKey: number; }
 
-function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1)
-    return (
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-gold shadow-md">
-        <Crown className="h-4 w-4 text-white" strokeWidth={2.5} />
-      </div>
-    );
-  if (rank === 2)
-    return (
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-300 to-slate-400 shadow-sm">
-        <Medal className="h-4 w-4 text-white" strokeWidth={2.5} />
-      </div>
-    );
-  if (rank === 3)
-    return (
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-amber-600 shadow-sm">
-        <Trophy className="h-4 w-4 text-white" strokeWidth={2.5} />
-      </div>
-    );
-  return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-lg border bg-secondary text-xs font-bold text-muted-foreground font-mono-tabular">
-      {rank}
-    </div>
-  );
-}
-
-function Avatar({ name }: { name: string }) {
+function Avatar({ name, dim = false }: { name: string; dim?: boolean }) {
   const initial = name.trim().charAt(0).toUpperCase() || "?";
-  // hash to color
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const hue = Math.abs(hash) % 360;
   return (
     <div
-      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
-      style={{ background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 50%))` }}
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted font-mono-tabular text-xs font-semibold",
+        dim ? "text-muted-foreground" : "text-foreground",
+      )}
     >
       {initial}
     </div>
@@ -64,50 +30,66 @@ function Avatar({ name }: { name: string }) {
 export function ProLeaderboard({ game, mode, refreshKey }: Props) {
   const meta = GAMES[game];
   const [period, setPeriod] = useState<Period>("all");
-  const playerName = getPlayerName();
+  const { user, profile } = useAuth();
 
-  const board = useMemo(
-    () => getLeaderboard(game, mode, period, 20),
-    [game, mode, period, refreshKey],
+  const [board, setBoard] = useState<(ScoreRow & { rank: number })[]>([]);
+  const [myBestAll, setMyBestAll] = useState<ScoreRow | null>(null);
+  const [myBestWeek, setMyBestWeek] = useState<ScoreRow | null>(null);
+  const [history, setHistory] = useState<ScoreRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [b, ba, bw, h] = await Promise.all([
+        getLeaderboard(game, mode, period, 20),
+        getMyBest(game, mode, "all"),
+        getMyBest(game, mode, "weekly"),
+        getMyHistory(game, mode, 5),
+      ]);
+      if (cancelled) return;
+      setBoard(b);
+      setMyBestAll(ba);
+      setMyBestWeek(bw);
+      setHistory(h);
+    })();
+    return () => { cancelled = true; };
+  }, [game, mode, period, refreshKey, user?.id]);
+
+  const myRank = useMemo(
+    () => (user ? board.find((s) => s.user_id === user.id)?.rank ?? null : null),
+    [board, user],
   );
-  const myBestAll = useMemo(() => getMyBest(game, mode, "all"), [game, mode, refreshKey]);
-  const myBestWeek = useMemo(() => getMyBest(game, mode, "weekly"), [game, mode, refreshKey]);
-  const myHistory = useMemo(() => getMyHistory(game, mode, 5), [game, mode, refreshKey]);
-
-  const myRankInBoard = playerName
-    ? board.find((s) => s.name === playerName)?.rank ?? null
-    : null;
 
   return (
     <div className="space-y-4">
-      {/* My Best Card */}
-      <div className="overflow-hidden rounded-2xl border bg-gradient-card shadow-md">
-        <div className="bg-gradient-primary px-5 py-2.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary-foreground/90">
-            <Sparkles className="h-3 w-3" />
+      {/* My Best */}
+      <div className="rounded-md border border-border bg-card">
+        <div className="border-b border-border px-4 py-2.5">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             我的最佳
           </div>
         </div>
-        <div className="p-5">
+        <div className="p-4">
           {myBestAll ? (
             <div className="flex items-end justify-between gap-4">
               <div>
-                <div className="text-xs text-muted-foreground">{meta.valueLabel}</div>
-                <div className="font-mono-tabular text-3xl font-bold leading-tight text-gradient">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {meta.valueLabel}
+                </div>
+                <div className="font-mono-tabular text-3xl font-semibold leading-tight text-foreground">
                   {meta.formatValue(myBestAll.value)}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {formatRelative(myBestAll.date)}
+                <div className="mt-0.5 text-[11px] text-muted-foreground">
+                  {formatRelative(myBestAll.created_at)}
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
-                {myRankInBoard && (
-                  <div className="flex items-center gap-1 rounded-full bg-energy/15 px-2.5 py-1 text-xs font-bold text-foreground">
-                    <Crown className="h-3 w-3 text-energy" />
-                    榜单 #{myRankInBoard}
+              <div className="flex flex-col items-end gap-1">
+                {myRank && (
+                  <div className="rounded-sm border border-primary/30 bg-primary/5 px-2 py-0.5 font-mono-tabular text-[11px] font-semibold text-primary">
+                    #{myRank}
                   </div>
                 )}
-                {myBestWeek && myBestAll && (
+                {myBestWeek && (
                   <WeekDelta
                     direction={meta.direction}
                     weekValue={myBestWeek.value}
@@ -119,24 +101,22 @@ export function ProLeaderboard({ game, mode, refreshKey }: Props) {
             </div>
           ) : (
             <div className="py-2 text-center text-sm text-muted-foreground">
-              {playerName ? "完成一局即可创建你的最佳记录" : "在右上角设置昵称后开始记录"}
+              {user ? "完成一局即可创建你的最佳记录" : "登录后开始记录你的最佳"}
             </div>
           )}
 
-          {myHistory.length > 1 && (
-            <details className="mt-4 border-t pt-3 group">
-              <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+          {history.length > 1 && (
+            <details className="mt-4 border-t border-border pt-3 group">
+              <summary className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
                 <History className="h-3 w-3" />
-                最近 {myHistory.length} 局
+                最近 {history.length} 局
                 <span className="ml-auto opacity-60 group-open:rotate-180 transition-transform">⌄</span>
               </summary>
               <ul className="mt-2 space-y-1">
-                {myHistory.map((h) => (
+                {history.map((h) => (
                   <li key={h.id} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{formatRelative(h.date)}</span>
-                    <span className="font-mono-tabular font-semibold">
-                      {meta.formatValue(h.value)}
-                    </span>
+                    <span className="text-muted-foreground">{formatRelative(h.created_at)}</span>
+                    <span className="font-mono-tabular font-medium">{meta.formatValue(h.value)}</span>
                   </li>
                 ))}
               </ul>
@@ -145,65 +125,66 @@ export function ProLeaderboard({ game, mode, refreshKey }: Props) {
         </div>
       </div>
 
-      {/* Leaderboard */}
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-md">
-        <div className="flex items-center justify-between border-b px-5 py-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-energy" />
-            <h3 className="font-bold">排行榜</h3>
+      {/* Board */}
+      <div className="rounded-md border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-sm font-semibold">排行榜</h3>
+            <span className="font-mono-tabular text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {mode}
+            </span>
           </div>
-          <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            {mode}
-          </span>
         </div>
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <div className="px-5 pt-3">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="all">总榜</TabsTrigger>
-              <TabsTrigger value="weekly">本周</TabsTrigger>
+          <div className="border-b border-border px-4 pt-3">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/60 p-0.5">
+              <TabsTrigger value="all" className="text-xs">总榜</TabsTrigger>
+              <TabsTrigger value="weekly" className="text-xs">本周</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value={period} className="m-0 p-2">
             {board.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                  <Trophy className="h-5 w-5 text-muted-foreground" />
-                </div>
+              <div className="flex flex-col items-center gap-1 py-10 text-center">
                 <p className="text-sm text-muted-foreground">
                   {period === "weekly" ? "本周还没有记录" : "暂无排名"}
                 </p>
-                <p className="text-xs text-muted-foreground/70">第一名虚位以待 🚀</p>
+                <p className="text-[11px] text-muted-foreground/70">第一名虚位以待</p>
               </div>
             ) : (
-              <ol className="space-y-0.5">
+              <ol className="divide-y divide-border">
                 {board.map((s) => {
-                  const isMe = s.name === playerName;
+                  const isMe = user && s.user_id === user.id;
                   return (
                     <li
                       key={s.id}
                       className={cn(
-                        "group flex items-center gap-3 rounded-xl px-3 py-2 transition-all",
-                        isMe
-                          ? "bg-primary/10 ring-1 ring-primary/30"
-                          : "hover:bg-secondary/60",
+                        "grid grid-cols-[28px_32px_1fr_auto] items-center gap-3 px-2 py-2.5",
+                        isMe && "bg-primary/5",
                       )}
                     >
-                      <RankBadge rank={s.rank} />
-                      <Avatar name={s.name} />
-                      <div className="flex-1 min-w-0">
+                      <span
+                        className={cn(
+                          "font-mono-tabular text-sm font-semibold tabular-nums",
+                          s.rank === 1 ? "text-primary" : "text-muted-foreground",
+                        )}
+                      >
+                        {s.rank}
+                      </span>
+                      <Avatar name={s.nickname || "玩家"} dim={s.rank > 3} />
+                      <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate text-sm font-semibold">{s.name}</span>
+                          <span className="truncate text-sm font-medium">{s.nickname || "玩家"}</span>
                           {isMe && (
-                            <span className="rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-foreground">
+                            <span className="rounded-sm bg-primary/10 px-1 py-0 font-mono-tabular text-[9px] font-semibold uppercase text-primary">
                               你
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {formatRelative(s.date)}
+                        <div className="font-mono-tabular text-[10px] text-muted-foreground">
+                          {formatRelative(s.created_at)}
                         </div>
                       </div>
-                      <div className="font-mono-tabular text-sm font-bold tabular-nums">
+                      <div className="font-mono-tabular text-sm font-semibold tabular-nums">
                         {meta.formatValue(s.value)}
                       </div>
                     </li>
@@ -214,36 +195,32 @@ export function ProLeaderboard({ game, mode, refreshKey }: Props) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {!user && (
+        <p className="text-center text-[11px] text-muted-foreground">
+          登录后成绩自动同步到云端排行榜。
+        </p>
+      )}
     </div>
   );
 }
 
 function WeekDelta({
-  direction,
-  weekValue,
-  allValue,
-  format,
+  direction, weekValue, allValue, format,
 }: {
   direction: "lower" | "higher";
   weekValue: number;
   allValue: number;
   format: (v: number) => string;
 }) {
-  // Compare weekly best vs all-time best
   const isImprovement = direction === "lower" ? weekValue <= allValue : weekValue >= allValue;
   const diff = Math.abs(weekValue - allValue);
-  if (diff === 0) {
-    return (
-      <div className="text-[10px] text-muted-foreground">本周已达个人最佳</div>
-    );
-  }
+  if (diff === 0) return <div className="text-[10px] text-muted-foreground">本周已达个人最佳</div>;
   return (
-    <div
-      className={cn(
-        "flex items-center gap-1 text-[10px] font-semibold",
-        isImprovement ? "text-success" : "text-muted-foreground",
-      )}
-    >
+    <div className={cn(
+      "flex items-center gap-1 font-mono-tabular text-[10px] font-medium",
+      isImprovement ? "text-primary" : "text-muted-foreground",
+    )}>
       {isImprovement ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       本周 {format(weekValue)}
     </div>

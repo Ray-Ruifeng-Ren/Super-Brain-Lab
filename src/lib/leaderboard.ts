@@ -1,21 +1,24 @@
-export type GameId = "flashmath" | "schulte" | "reaction" | "memory";
+// Cloud-backed leaderboard + game metadata.
+// LocalStorage helpers from v1 are kept for legacy fall-through but new
+// scores are persisted in Supabase via supabase client.
 
-export type Score = {
-  id: string;
-  game: GameId;
-  mode: string; // e.g. "4x4" / "default" / "default"
-  name: string;
-  // For schulte/reaction: lower is better (ms).
-  // For memory: higher is better (level).
-  value: number;
-  date: number;
-};
+import { supabase } from "@/integrations/supabase/client";
 
-const KEY = "neuroplay_scores_v2";
-const NAME_KEY = "neuroplay_player_name";
-const PID_KEY = "neuroplay_player_id";
-
+export type GameId = "flashmath" | "schulte" | "reaction" | "nback";
 export type ScoreDirection = "lower" | "higher";
+export type Period = "weekly" | "all";
+
+export interface ScoreRow {
+  id: string;
+  user_id: string;
+  game: GameId;
+  mode: string;
+  value: number;
+  meta: Record<string, unknown>;
+  created_at: string;
+  // joined
+  nickname?: string;
+}
 
 export const GAMES: Record<
   GameId,
@@ -24,155 +27,232 @@ export const GAMES: Record<
     name: string;
     tagline: string;
     description: string;
-    accent: string; // tailwind gradient class
     direction: ScoreDirection;
     formatValue: (v: number) => string;
     valueLabel: string;
+    initial: string;
   }
 > = {
   flashmath: {
     id: "flashmath",
     name: "闪电心算",
-    tagline: "珠心算 · 速算训练",
-    description: "题目逐个闪现，心算累加，支持语音报答案",
-    accent: "from-fuchsia-500 to-orange-500",
+    tagline: "Flash Mental Arithmetic",
+    description: "数字逐笔闪现，心算累加。支持语音作答。",
     direction: "higher",
-    formatValue: (v) => `${v} 分`,
+    formatValue: (v) => `${Math.round(v)}`,
     valueLabel: "得分",
+    initial: "F",
   },
   schulte: {
     id: "schulte",
     name: "舒尔特方格",
-    tagline: "注意力 · 经典训练",
-    description: "按 1→N 顺序点击方格，越快越好",
-    accent: "from-violet-500 to-indigo-500",
+    tagline: "Schulte Table",
+    description: "依序点击 1→N 数字，专注力经典训练。",
     direction: "lower",
     formatValue: (v) => formatTime(v),
     valueLabel: "用时",
+    initial: "S",
   },
   reaction: {
     id: "reaction",
     name: "反应速度",
-    tagline: "瞬时反应 · 极限挑战",
-    description: "屏幕变绿的瞬间立刻点击",
-    accent: "from-emerald-500 to-cyan-500",
+    tagline: "Reaction Time",
+    description: "屏幕变绿瞬间立刻点击，毫秒级反应测试。",
     direction: "lower",
-    formatValue: (v) => `${Math.round(v)} ms`,
+    formatValue: (v) => `${Math.round(v)}ms`,
     valueLabel: "反应",
+    initial: "R",
   },
-  memory: {
-    id: "memory",
-    name: "数字记忆",
-    tagline: "短时记忆 · 进阶难度",
-    description: "记住屏幕显示的数字序列并复述",
-    accent: "from-amber-500 to-rose-500",
+  nback: {
+    id: "nback",
+    name: "N-Back",
+    tagline: "Working Memory",
+    description: "工作记忆的国际黄金标准训练。",
     direction: "higher",
-    formatValue: (v) => `Lv. ${v}`,
-    valueLabel: "等级",
+    formatValue: (v) => `${Math.round(v)}%`,
+    valueLabel: "命中",
+    initial: "N",
   },
 };
 
-export function getPlayerId(): string {
-  let id = localStorage.getItem(PID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(PID_KEY, id);
-  }
-  return id;
-}
-
-export function getPlayerName(): string {
-  return localStorage.getItem(NAME_KEY) || "";
-}
-export function setPlayerName(name: string) {
-  localStorage.setItem(NAME_KEY, name);
-}
-
-export function getAllScores(): Score[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-export function addScore(input: Omit<Score, "id" | "date">): Score {
-  const score: Score = { ...input, id: crypto.randomUUID(), date: Date.now() };
-  const all = [...getAllScores(), score];
-  localStorage.setItem(KEY, JSON.stringify(all));
-  return score;
-}
-
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-export type Period = "weekly" | "all";
-
-function sortByDirection(direction: ScoreDirection) {
-  return (a: Score, b: Score) => (direction === "lower" ? a.value - b.value : b.value - a.value);
+function dirSort(direction: ScoreDirection) {
+  return (a: { value: number }, b: { value: number }) =>
+    direction === "lower" ? a.value - b.value : b.value - a.value;
 }
 
-/** Best score per player for the given filter */
-export function getLeaderboard(
+/** Submit a score. No-op if no logged-in user. */
+export async function submitScore(input: {
+  game: GameId;
+  mode: string;
+  value: number;
+  meta?: Record<string, unknown>;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return { ok: false, error: "未登录" };
+  const { error } = await supabase.from("scores").insert({
+    user_id: u.user.id,
+    game: input.game,
+    mode: input.mode,
+    value: input.value,
+    meta: (input.meta ?? {}) as any,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+interface RawScore {
+  id: string;
+  user_id: string;
+  game: string;
+  mode: string;
+  value: number | string;
+  meta: any;
+  created_at: string;
+  profiles: { nickname: string | null } | null;
+}
+
+async function fetchScores(game: GameId, mode: string, period: Period): Promise<ScoreRow[]> {
+  let q = supabase
+    .from("scores")
+    .select("id,user_id,game,mode,value,meta,created_at,profiles(nickname)")
+    .eq("game", game)
+    .eq("mode", mode)
+    .limit(500);
+  if (period === "weekly") {
+    q = q.gte("created_at", new Date(Date.now() - WEEK_MS).toISOString());
+  }
+  const { data, error } = await q;
+  if (error || !data) return [];
+  return (data as unknown as RawScore[]).map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    game: r.game as GameId,
+    mode: r.mode,
+    value: typeof r.value === "string" ? Number(r.value) : r.value,
+    meta: r.meta ?? {},
+    created_at: r.created_at,
+    nickname: r.profiles?.nickname || "玩家",
+  }));
+}
+
+export async function getLeaderboard(
   game: GameId,
   mode: string,
   period: Period,
   limit = 20,
-): (Score & { rank: number })[] {
-  const cutoff = period === "weekly" ? Date.now() - WEEK_MS : 0;
-  const filtered = getAllScores().filter(
-    (s) => s.game === game && s.mode === mode && s.date >= cutoff,
-  );
-  // Best per name (player identity)
-  const bestByName = new Map<string, Score>();
+): Promise<(ScoreRow & { rank: number })[]> {
+  const rows = await fetchScores(game, mode, period);
   const dir = GAMES[game].direction;
-  for (const s of filtered) {
-    const cur = bestByName.get(s.name);
-    if (!cur) {
-      bestByName.set(s.name, s);
-      continue;
+  const bestByUser = new Map<string, ScoreRow>();
+  for (const r of rows) {
+    const cur = bestByUser.get(r.user_id);
+    if (!cur) bestByUser.set(r.user_id, r);
+    else {
+      const better = dir === "lower" ? r.value < cur.value : r.value > cur.value;
+      if (better) bestByUser.set(r.user_id, r);
     }
-    const better = dir === "lower" ? s.value < cur.value : s.value > cur.value;
-    if (better) bestByName.set(s.name, s);
   }
-  return [...bestByName.values()]
-    .sort(sortByDirection(dir))
+  return [...bestByUser.values()]
+    .sort(dirSort(dir))
     .slice(0, limit)
     .map((s, i) => ({ ...s, rank: i + 1 }));
 }
 
-export function getMyBest(game: GameId, mode: string, period: Period = "all"): Score | null {
-  const name = getPlayerName();
-  if (!name) return null;
-  const cutoff = period === "weekly" ? Date.now() - WEEK_MS : 0;
+export async function getMyBest(
+  game: GameId,
+  mode: string,
+  period: Period = "all",
+): Promise<ScoreRow | null> {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return null;
   const dir = GAMES[game].direction;
-  const mine = getAllScores().filter(
-    (s) => s.game === game && s.mode === mode && s.name === name && s.date >= cutoff,
-  );
-  if (mine.length === 0) return null;
-  return mine.sort(sortByDirection(dir))[0];
+  let q = supabase
+    .from("scores")
+    .select("id,user_id,game,mode,value,meta,created_at,profiles(nickname)")
+    .eq("game", game)
+    .eq("mode", mode)
+    .eq("user_id", u.user.id)
+    .order("value", { ascending: dir === "lower" })
+    .limit(1);
+  if (period === "weekly") {
+    q = q.gte("created_at", new Date(Date.now() - WEEK_MS).toISOString());
+  }
+  const { data, error } = await q;
+  if (error || !data || data.length === 0) return null;
+  const r = data[0] as unknown as RawScore;
+  return {
+    id: r.id,
+    user_id: r.user_id,
+    game: r.game as GameId,
+    mode: r.mode,
+    value: typeof r.value === "string" ? Number(r.value) : r.value,
+    meta: r.meta ?? {},
+    created_at: r.created_at,
+    nickname: r.profiles?.nickname || "玩家",
+  };
 }
 
-export function getMyHistory(game: GameId, mode: string, limit = 10): Score[] {
-  const name = getPlayerName();
-  if (!name) return [];
-  return getAllScores()
-    .filter((s) => s.game === game && s.mode === mode && s.name === name)
-    .sort((a, b) => b.date - a.date)
-    .slice(0, limit);
+export async function getMyHistory(
+  game: GameId,
+  mode: string,
+  limit = 8,
+): Promise<ScoreRow[]> {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return [];
+  const { data } = await supabase
+    .from("scores")
+    .select("id,user_id,game,mode,value,meta,created_at,profiles(nickname)")
+    .eq("game", game)
+    .eq("mode", mode)
+    .eq("user_id", u.user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (!data) return [];
+  return (data as unknown as RawScore[]).map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    game: r.game as GameId,
+    mode: r.mode,
+    value: typeof r.value === "string" ? Number(r.value) : r.value,
+    meta: r.meta ?? {},
+    created_at: r.created_at,
+    nickname: r.profiles?.nickname || "玩家",
+  }));
 }
 
-export function getPlayerCount(game: GameId, mode: string): number {
-  const names = new Set(
-    getAllScores().filter((s) => s.game === game && s.mode === mode).map((s) => s.name),
-  );
-  return names.size;
-}
-
-export function getGlobalBest(game: GameId, mode: string): Score | null {
+export async function getGlobalBest(game: GameId, mode: string): Promise<ScoreRow | null> {
   const dir = GAMES[game].direction;
-  const all = getAllScores().filter((s) => s.game === game && s.mode === mode);
-  if (all.length === 0) return null;
-  return all.sort(sortByDirection(dir))[0];
+  const { data } = await supabase
+    .from("scores")
+    .select("id,user_id,game,mode,value,meta,created_at,profiles(nickname)")
+    .eq("game", game)
+    .eq("mode", mode)
+    .order("value", { ascending: dir === "lower" })
+    .limit(1);
+  if (!data || data.length === 0) return null;
+  const r = data[0] as unknown as RawScore;
+  return {
+    id: r.id,
+    user_id: r.user_id,
+    game: r.game as GameId,
+    mode: r.mode,
+    value: typeof r.value === "string" ? Number(r.value) : r.value,
+    meta: r.meta ?? {},
+    created_at: r.created_at,
+    nickname: r.profiles?.nickname || "玩家",
+  };
+}
+
+export async function getPlayerCount(game: GameId, mode: string): Promise<number> {
+  const { data } = await supabase
+    .from("scores")
+    .select("user_id")
+    .eq("game", game)
+    .eq("mode", mode);
+  if (!data) return 0;
+  return new Set(data.map((d: any) => d.user_id)).size;
 }
 
 export function formatTime(ms: number): string {
@@ -181,7 +261,8 @@ export function formatTime(ms: number): string {
   return `${s}.${cs.toString().padStart(2, "0")}s`;
 }
 
-export function formatRelative(ts: number): string {
+export function formatRelative(iso: string): string {
+  const ts = new Date(iso).getTime();
   const diff = Date.now() - ts;
   const min = Math.floor(diff / 60000);
   if (min < 1) return "刚刚";
@@ -190,5 +271,5 @@ export function formatRelative(ts: number): string {
   if (h < 24) return `${h} 小时前`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d} 天前`;
-  return new Date(ts).toLocaleDateString();
+  return new Date(ts).toLocaleDateString("zh-CN");
 }

@@ -1,249 +1,140 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  GAMES,
-  GameId,
-  getGlobalBest,
-  getPlayerCount,
-  getPlayerName,
-  setPlayerName,
-} from "@/lib/leaderboard";
-import {
-  Brain,
-  User,
-  ArrowRight,
-  Users,
-  Trophy,
-  Zap,
-  Sparkles,
-  Calculator,
-  Mic,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { GAMES, type GameId } from "@/lib/leaderboard";
+import { AccountMenu } from "@/components/AccountMenu";
+import { ArrowRight, Mic, Trophy, Sparkles } from "lucide-react";
 
-const GAME_ICONS = {
-  schulte: Brain,
-  reaction: Zap,
-  memory: Sparkles,
-  flashmath: Calculator,
-};
-
-const FEATURED_ID: GameId = "flashmath";
-const SECONDARY_IDS: GameId[] = ["schulte", "reaction", "memory"];
+const FEATURED: GameId = "flashmath";
+const SECONDARY: GameId[] = ["schulte", "reaction", "nback"];
 
 const Index = () => {
-  const [name, setName] = useState("");
-  useEffect(() => setName(getPlayerName()), []);
-
-  const featured = GAMES[FEATURED_ID];
-  const FeaturedIcon = GAME_ICONS[FEATURED_ID];
+  const featured = GAMES[FEATURED];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Slogan strip — slim, top */}
-      <div className="bg-gradient-hero text-primary-foreground">
-        <div className="container flex items-center justify-center gap-2 py-1.5 text-[11px] font-medium">
-          <Sparkles className="h-3 w-3" />
-          脑力竞技广场 · 注意力 · 反应 · 记忆 · 速算
-        </div>
-      </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-lg">
-        <div className="container flex items-center justify-between py-2.5">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
-              <Brain className="h-4 w-4 text-primary-foreground" />
-            </div>
+      <header className="border-b border-border bg-background">
+        <div className="container flex items-center justify-between py-4">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground font-display text-sm font-semibold">N</div>
             <div>
-              <h1 className="text-sm font-bold leading-none tracking-tight">NeuroPlay</h1>
-              <p className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">
-                脑力竞技场
-              </p>
+              <div className="text-sm font-semibold leading-none">NeuroPlay</div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Brain Training Arena</div>
             </div>
           </Link>
-          <div className="flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1">
-            <User className="h-3 w-3 text-muted-foreground" />
-            <Input
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setPlayerName(e.target.value);
-              }}
-              placeholder="昵称"
-              className="h-5 w-24 border-0 bg-transparent p-0 text-xs focus-visible:ring-0"
-              maxLength={12}
-            />
-          </div>
+          <AccountMenu />
         </div>
       </header>
 
-      <main className="container py-5 space-y-7">
-        {/* Featured — first thing user sees */}
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-energy">
-              <Sparkles className="h-3 w-3" />
-              今日主推
+      <main className="container max-w-5xl py-12 md:py-16">
+        {/* Hero */}
+        <section className="grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-center">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <Sparkles className="h-3 w-3 text-primary" /> 今日推荐
             </div>
-            <span className="text-[10px] text-muted-foreground">推荐先打这个</span>
+            <h1 className="font-display text-5xl leading-[1.05] tracking-tight md:text-6xl">
+              专注、速算、记忆<br />
+              <em className="not-italic text-primary">皆可量化。</em>
+            </h1>
+            <p className="mt-5 max-w-prose text-base text-muted-foreground">
+              一套面向认知极限的训练与排行系统。每一笔成绩都被记录，每一次进步都可比较。
+            </p>
+            <div className="mt-7 flex items-center gap-3">
+              <Link
+                to={`/play/${featured.id}`}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:opacity-95"
+              >
+                开始 {featured.name} <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                to={`/play/nback`}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                浏览全部训练 →
+              </Link>
+            </div>
           </div>
 
           <Link
             to={`/play/${featured.id}`}
-            className={cn(
-              "group relative block overflow-hidden rounded-2xl text-white shadow-elegant transition-all hover:-translate-y-0.5 hover:shadow-glow",
-              "bg-gradient-to-br",
-              featured.accent,
-            )}
+            className="group block rounded-md border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-md"
           >
-            <div
-              className="absolute inset-0 opacity-25"
-              style={{
-                backgroundImage: "radial-gradient(circle at 80% 50%, white 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div className="relative grid gap-4 p-5 md:grid-cols-[1fr_auto] md:p-6">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest opacity-90">
-                  {featured.tagline}
-                </div>
-                <h3 className="mt-1.5 text-2xl font-bold md:text-3xl">{featured.name}</h3>
-                <p className="mt-1.5 max-w-md text-xs opacity-95 md:text-sm">
-                  {featured.description}。世界级珠心算选手都在用，速度可低至 200ms。
-                </p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <Tag icon={<Mic className="h-2.5 w-2.5" />}>语音作答</Tag>
-                  <Tag>自定义笔数 1-100</Tag>
-                  <Tag>位数 1-7</Tag>
-                </div>
-                <Button
-                  size="sm"
-                  className="mt-4 bg-white text-foreground hover:bg-white/90 shadow-md"
-                >
-                  立即挑战
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </div>
-              <div className="hidden items-center justify-center md:flex">
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-                  <FeaturedIcon className="h-12 w-12" strokeWidth={1.8} />
-                </div>
-              </div>
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <span>{featured.tagline}</span>
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+            </div>
+            <h2 className="mt-3 font-display text-2xl">{featured.name}</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">{featured.description}</p>
+            <div className="mt-5 flex flex-wrap gap-1.5 text-[10px]">
+              <Tag><Mic className="h-2.5 w-2.5" /> 语音作答</Tag>
+              <Tag>1–7 位</Tag>
+              <Tag>200ms 极速</Tag>
+              <Tag>专业出题</Tag>
             </div>
           </Link>
         </section>
 
-        {/* Secondary games */}
-        <section>
-          <div className="mb-2.5 flex items-end justify-between">
-            <h3 className="text-sm font-bold">更多训练</h3>
-            <span className="text-[10px] text-muted-foreground">
-              {SECONDARY_IDS.length} 款
+        {/* Modules */}
+        <section className="mt-20">
+          <div className="mb-5 flex items-baseline justify-between border-b border-border pb-2.5">
+            <h3 className="font-display text-xl">认知矩阵</h3>
+            <span className="font-mono-tabular text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {SECONDARY.length} Modules
             </span>
           </div>
-          <div className="grid gap-2.5 md:grid-cols-3">
-            {SECONDARY_IDS.map((id) => {
+          <div className="grid gap-3 md:grid-cols-3">
+            {SECONDARY.map((id) => {
               const g = GAMES[id];
-              const Icon = GAME_ICONS[id];
-              const best = getGlobalBest(id, defaultMode(id));
-              const players = getPlayerCount(id, defaultMode(id));
               return (
                 <Link
                   key={id}
                   to={`/play/${id}`}
-                  className="group relative flex items-center gap-2.5 overflow-hidden rounded-xl border bg-card p-3 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                  className="group rounded-md border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-sm"
                 >
-                  <div
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm",
-                      "bg-gradient-to-br",
-                      g.accent,
-                    )}
-                  >
-                    <Icon className="h-4 w-4" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="truncate text-xs font-bold">{g.name}</h4>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-accent font-mono-tabular text-xs font-semibold text-primary">
+                      {g.initial}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span className="flex items-center gap-0.5">
-                        <Users className="h-2.5 w-2.5" />
-                        {players}
-                      </span>
-                      {best && (
-                        <span className="flex items-center gap-0.5">
-                          <Trophy className="h-2.5 w-2.5 text-energy" />
-                          <span className="font-mono-tabular font-semibold text-foreground">
-                            {g.formatValue(best.value)}
-                          </span>
-                        </span>
-                      )}
-                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   </div>
+                  <h4 className="mt-3 font-display text-lg">{g.name}</h4>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{g.tagline}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{g.description}</p>
                 </Link>
               );
             })}
           </div>
         </section>
 
-        {/* Value props */}
-        <section className="grid gap-2.5 md:grid-cols-3">
-          <ValueCard
-            icon={<Trophy className="h-4 w-4" />}
-            title="专业排行榜"
-            text="周榜 · 总榜 · 个人最佳"
-          />
-          <ValueCard
-            icon={<Mic className="h-4 w-4" />}
-            title="语音作答"
-            text="动嘴不动手，模拟真实赛场"
-          />
-          <ValueCard
-            icon={<Sparkles className="h-4 w-4" />}
-            title="科学训练"
-            text="融合心算、记忆、注意力"
-          />
+        {/* Values */}
+        <section className="mt-20 grid gap-6 border-t border-border pt-12 md:grid-cols-3">
+          <Value title="云端排行榜" body="周榜、总榜、个人最佳，全自动同步与排序。" icon={<Trophy className="h-3.5 w-3.5 text-primary" />} />
+          <Value title="语音作答" body="解放双手，模拟真实赛场计时与作答方式。" icon={<Mic className="h-3.5 w-3.5 text-primary" />} />
+          <Value title="科学出题" body="每位 0–9 均匀分布、单笔无重复，达到专业珠心算标准。" icon={<Sparkles className="h-3.5 w-3.5 text-primary" />} />
         </section>
 
-        <footer className="text-center text-[10px] text-muted-foreground">
-          排名当前保存在本机 · 接入 Lovable Cloud 即可解锁全球榜
+        <footer className="mt-16 border-t border-border pt-6 text-center text-[11px] text-muted-foreground">
+          © NeuroPlay · 登录后成绩自动同步到云端
         </footer>
       </main>
     </div>
   );
 };
 
-function Tag({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold backdrop-blur">
-      {icon}
+    <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-background px-1.5 py-0.5 font-medium text-muted-foreground">
       {children}
     </span>
   );
 }
-
-function ValueCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+function Value({ title, body, icon }: { title: string; body: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-gradient-card p-3">
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        {icon}
-      </div>
-      <h4 className="mt-2 text-xs font-bold">{title}</h4>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">{text}</p>
+    <div>
+      <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-border bg-card">{icon}</div>
+      <h4 className="mt-3 font-display text-base">{title}</h4>
+      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
     </div>
   );
-}
-
-function defaultMode(id: GameId) {
-  if (id === "schulte") return "4x4";
-  if (id === "flashmath") return "5q-2d";
-  return "default";
 }
 
 export default Index;
