@@ -37,6 +37,7 @@ const Play = () => {
     game.id === "schulte" ? `${schulteSize}x${schulteSize}` :
     game.id === "flashmath" ? `${flashCfg.count}q-${flashCfg.digits}d${flashCfg.includeSub ? "-sub" : ""}` :
     game.id === "nback" ? `${nbackCfg.n}-back-${nbackCfg.trials}` :
+    game.id === "cards" ? "deck52" :
     "default";
 
   return (
