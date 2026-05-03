@@ -1,4 +1,4 @@
-export type GameId = "schulte" | "reaction" | "memory";
+export type GameId = "flashmath" | "schulte" | "reaction" | "memory";
 
 export type Score = {
   id: string;
@@ -30,6 +30,16 @@ export const GAMES: Record<
     valueLabel: string;
   }
 > = {
+  flashmath: {
+    id: "flashmath",
+    name: "闪电心算",
+    tagline: "珠心算 · 速算训练",
+    description: "题目逐个闪现，心算累加，支持语音报答案",
+    accent: "from-fuchsia-500 to-orange-500",
+    direction: "higher",
+    formatValue: (v) => `${v} 分`,
+    valueLabel: "得分",
+  },
   schulte: {
     id: "schulte",
     name: "舒尔特方格",
