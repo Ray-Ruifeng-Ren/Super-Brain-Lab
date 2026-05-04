@@ -11,26 +11,10 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().trim().email("邮箱格式不正确").max(255);
-const pwdSchema = z
-  .string()
-  .min(8, "密码至少 8 位")
-  .max(72, "密码过长")
-  .regex(/[A-Za-z]/, "密码需包含字母")
-  .regex(/[0-9]/, "密码需包含数字")
-  .refine((v) => !/^(?:password|123456|qwerty|111111|000000|abc123|letmein|admin)/i.test(v), "密码过于常见，请更换");
-
-function friendlyAuthError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("weak") || m.includes("pwned") || m.includes("known to be")) {
-    return "该密码太常见或已泄露，请使用更复杂的密码（建议字母+数字+符号，长度 ≥10）";
-  }
-  if (m.includes("already registered") || m.includes("user already")) return "该邮箱已注册，请直接登录";
-  if (m.includes("invalid login")) return "邮箱或密码不正确";
-  return msg;
-}
+const pwdSchema = z.string().min(6, "密码至少 6 位").max(72);
 
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
@@ -61,7 +45,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast({ title: "操作失败", description: friendlyAuthError(err.message ?? String(err)), variant: "destructive" });
+      toast({ title: "操作失败", description: err.message ?? String(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
