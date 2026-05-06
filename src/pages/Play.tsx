@@ -93,8 +93,41 @@ const Play = () => {
             {game.id === "flashmath" && <FlashMathGame onFinished={handleFinished} onCfgChange={setFlashCfg} />}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
             {game.id === "cards" && <CardMemoryGame />}
+            {game.id === "orbit" && <OrbitFocusGame onFinished={handleFinished} />}
           </div>
-          <aside>
+          <aside className="space-y-3">
+            {game.id === "orbit" && (
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  onClick={() => setOrbitMode("overall")}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    orbitMode === "overall"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  PFI 通榜
+                </button>
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const m = `L${i + 1}`;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setOrbitMode(m)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 font-mono-tabular text-[11px] font-medium transition-colors",
+                        orbitMode === m
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
           </aside>
         </div>
