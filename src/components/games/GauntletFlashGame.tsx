@@ -276,6 +276,7 @@ export function GauntletFlashGame({ onFinished }: { onFinished?: () => void }) {
 
   if (phase === "playing") {
     const item = sequence[stepIdx];
+    if (!item) return null;
     const totalRealTerms = sequence.filter((s) => s.kind === "term").length;
     const realTermPassed = sequence.slice(0, stepIdx + 1).filter((s) => s.kind === "term").length;
     return (
