@@ -4,7 +4,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { ArrowRight, Mic, Trophy, Sparkles } from "lucide-react";
 
 const FEATURED: GameId = "flashmath";
-const SECONDARY: GameId[] = ["schulte", "reaction", "nback", "cards", "orbit"];
+const SECONDARY: GameId[] = ["gauntlet", "schulte", "reaction", "nback", "cards", "orbit"];
 
 const Index = () => {
   const featured = GAMES[FEATURED];

@@ -8,6 +8,7 @@ import { FlashMathGame, type FlashCfg } from "@/components/games/FlashMathGame";
 import { NBackGame } from "@/components/games/NBackGame";
 import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { OrbitFocusGame } from "@/components/games/OrbitFocusGame";
+import { GauntletFlashGame } from "@/components/games/GauntletFlashGame";
 import { ProLeaderboard } from "@/components/ProLeaderboard";
 import { AccountMenu } from "@/components/AccountMenu";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const Play = () => {
   const [flashCfg, setFlashCfg] = useState<FlashCfg>({ count: 5, digits: 2, speedMs: 700, includeSub: false });
   const [nbackCfg, setNbackCfg] = useState({ n: 2, trials: 20, intervalMs: 2000 });
   const [orbitMode, setOrbitMode] = useState<string>("overall");
+  const [gauntletMode, setGauntletMode] = useState<string>("overall");
 
   if (!gameId || !(gameId in GAMES)) {
     return (
@@ -41,6 +43,7 @@ const Play = () => {
     game.id === "nback" ? `${nbackCfg.n}-back-${nbackCfg.trials}` :
     game.id === "cards" ? "deck52" :
     game.id === "orbit" ? orbitMode :
+    game.id === "gauntlet" ? gauntletMode :
     "default";
 
   return (
@@ -94,6 +97,7 @@ const Play = () => {
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
             {game.id === "cards" && <CardMemoryGame />}
             {game.id === "orbit" && <OrbitFocusGame onFinished={handleFinished} />}
+            {game.id === "gauntlet" && <GauntletFlashGame onFinished={handleFinished} />}
           </div>
           <aside className="space-y-3">
             {game.id === "orbit" && (
@@ -118,6 +122,38 @@ const Play = () => {
                       className={cn(
                         "rounded-md border px-2 py-1 font-mono-tabular text-[11px] font-medium transition-colors",
                         orbitMode === m
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {game.id === "gauntlet" && (
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  onClick={() => setGauntletMode("overall")}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    gauntletMode === "overall"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  GFI 通榜
+                </button>
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const m = `L${i + 1}`;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setGauntletMode(m)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 font-mono-tabular text-[11px] font-medium transition-colors",
+                        gauntletMode === m
                           ? "border-primary bg-primary/5 text-primary"
                           : "border-border text-muted-foreground hover:text-foreground",
                       )}
