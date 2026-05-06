@@ -465,10 +465,14 @@ function buildSequence(p: Problem, cfg: GauntletConfig, chaos: ChaosSpec): Flash
     }
   }
 
-  const driftPad = (1 - chaos.driftRange) / 2;
+  // 安全边距：数字最大字号 96px×1.5 ≈ 144px，舞台高 360px，宽度按数字位数大致同量级。
+  // 用 0.18 的归一化内边距，保证整个字形落在框内（即使在最大缩放下）。
+  const SAFE_PAD = 0.18;
+  const safeRange = Math.min(chaos.driftRange, 1 - SAFE_PAD * 2);
+  const safeStart = (1 - safeRange) / 2;
   const rndPos = () => ({
-    x: useDrift ? driftPad + Math.random() * chaos.driftRange : 0.5,
-    y: useDrift ? driftPad + Math.random() * chaos.driftRange : 0.5,
+    x: useDrift ? safeStart + Math.random() * safeRange : 0.5,
+    y: useDrift ? safeStart + Math.random() * safeRange : 0.5,
   });
   const rndScale = () => (useSize ? 1 - chaos.sizeJitter + Math.random() * chaos.sizeJitter * 2 : 1);
 
