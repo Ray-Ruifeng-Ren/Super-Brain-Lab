@@ -531,9 +531,9 @@ function Stage({ item, chaos }: { item: FlashItem; chaos: ChaosSpec }) {
     if (!useNoise) return [];
     return Array.from({ length: chaos.noiseCount }).map(() => ({
       d: Math.floor(Math.random() * 10),
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      s: 0.5 + Math.random() * 1.5,
+      x: 6 + Math.random() * 88, // 留 6% 内边距，避免噪点贴边/出框
+      y: 8 + Math.random() * 84,
+      s: 0.5 + Math.random() * 1.3,
       r: -25 + Math.random() * 50,
     }));
   }, [item, useNoise, chaos.noiseCount]);
