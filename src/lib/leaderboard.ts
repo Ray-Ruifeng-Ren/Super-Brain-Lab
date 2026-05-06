@@ -4,7 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards";
+export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards" | "orbit";
 export type ScoreDirection = "lower" | "higher";
 export type Period = "weekly" | "all";
 
@@ -83,7 +83,82 @@ export const GAMES: Record<
     valueLabel: "得分",
     initial: "C",
   },
+  orbit: {
+    id: "orbit",
+    name: "轨道追焦",
+    tagline: "Orbit Focus",
+    description: "眼动追踪 × 专注力。光点沿轨道运动，盯住目标并应对突发挑战。",
+    direction: "higher",
+    formatValue: (v) => `${Math.round(v)}`,
+    valueLabel: "得分",
+    initial: "O",
+  },
 };
+
+// ===== Orbit Focus: 双轨榜单（独立等级 + 通榜 PFI） =====
+export const ORBIT_LEVEL_WEIGHTS = [1.0, 1.2, 1.5, 1.9, 2.4, 3.0, 3.7, 4.5, 5.5, 7.0];
+export const ORBIT_MAX_LEVEL = 10;
+
+/** 取当前用户每个等级的最高分，计算 PFI（个人专注指数） */
+export async function computeOrbitPFI(userId: string): Promise<{
+  pfi: number;
+  bestByLevel: Record<number, { value: number; stars: number }>;
+  cleared: number;
+}> {
+  const { data } = await supabase
+    .from("scores")
+    .select("mode,value,meta")
+    .eq("game", "orbit")
+    .eq("user_id", userId)
+    .like("mode", "L%");
+  const bestByLevel: Record<number, { value: number; stars: number }> = {};
+  if (data) {
+    for (const r of data as any[]) {
+      const m = String(r.mode).match(/^L(\d+)$/);
+      if (!m) continue;
+      const lv = Number(m[1]);
+      if (lv < 1 || lv > ORBIT_MAX_LEVEL) continue;
+      const v = typeof r.value === "string" ? Number(r.value) : r.value;
+      const stars = Number(r.meta?.stars ?? 0);
+      const cur = bestByLevel[lv];
+      if (!cur || v > cur.value) bestByLevel[lv] = { value: v, stars };
+    }
+  }
+  let pfi = 0;
+  let cleared = 0;
+  for (let lv = 1; lv <= ORBIT_MAX_LEVEL; lv++) {
+    const b = bestByLevel[lv];
+    if (!b) continue;
+    cleared += 1;
+    const starBonus = b.stars >= 3 ? 1.15 : 1;
+    pfi += b.value * ORBIT_LEVEL_WEIGHTS[lv - 1] * starBonus;
+  }
+  return { pfi: Math.round(pfi), bestByLevel, cleared };
+}
+
+/** 提交单局后，重算并写入通榜（仅当超过当前 overall 最高才写） */
+export async function submitOrbitOverall(userId: string): Promise<number> {
+  const { pfi, cleared } = await computeOrbitPFI(userId);
+  if (pfi <= 0) return 0;
+  const { data: prev } = await supabase
+    .from("scores")
+    .select("value")
+    .eq("game", "orbit")
+    .eq("mode", "overall")
+    .eq("user_id", userId)
+    .order("value", { ascending: false })
+    .limit(1);
+  const prevBest = prev && prev.length > 0 ? Number((prev[0] as any).value) : 0;
+  if (pfi <= prevBest) return pfi;
+  await supabase.from("scores").insert({
+    user_id: userId,
+    game: "orbit",
+    mode: "overall",
+    value: pfi,
+    meta: { cleared } as any,
+  });
+  return pfi;
+}
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
