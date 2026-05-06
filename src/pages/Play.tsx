@@ -137,33 +137,28 @@ const Play = () => {
             {game.id === "gauntlet" && (
               <div className="flex flex-wrap items-center gap-1">
                 <button
-                  onClick={() => setGauntletMode("overall")}
+                  onClick={() => setGauntletView("overall")}
                   className={cn(
                     "rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
-                    gauntletMode === "overall"
+                    gauntletView === "overall"
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
                   GFI 通榜
                 </button>
-                {Array.from({ length: 10 }).map((_, i) => {
-                  const m = `L${i + 1}`;
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setGauntletMode(m)}
-                      className={cn(
-                        "rounded-md border px-2 py-1 font-mono-tabular text-[11px] font-medium transition-colors",
-                        gauntletMode === m
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
+                <button
+                  onClick={() => setGauntletView("current")}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 font-mono-tabular text-[11px] font-medium transition-colors",
+                    gauntletView === "current"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                  title={encodeMode(gauntletCfg)}
+                >
+                  当前配置榜
+                </button>
               </div>
             )}
             <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
