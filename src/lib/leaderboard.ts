@@ -4,7 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards" | "orbit";
+export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards" | "orbit" | "gauntlet";
 export type ScoreDirection = "lower" | "higher";
 export type Period = "weekly" | "all";
 
@@ -92,6 +92,16 @@ export const GAMES: Record<
     formatValue: (v) => `${Math.round(v)}`,
     valueLabel: "得分",
     initial: "O",
+  },
+  gauntlet: {
+    id: "gauntlet",
+    name: "障碍闪电心算",
+    tagline: "Gauntlet Flash Math",
+    description: "在位置漂移、干扰数字、噪点背景与颜色反转中完成闪电心算。",
+    direction: "higher",
+    formatValue: (v) => `${Math.round(v)}`,
+    valueLabel: "得分",
+    initial: "G",
   },
 };
 
