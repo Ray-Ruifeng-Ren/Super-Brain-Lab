@@ -66,7 +66,7 @@ const Play = () => {
       </header>
 
       <section className="border-b border-border bg-card">
-        <div className="container py-3 md:py-4">
+        <div className="container py-2 md:py-3">
           <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{game.tagline}</div>
           <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className="font-display text-2xl leading-tight">{game.name}</h1>
@@ -75,9 +75,9 @@ const Play = () => {
         </div>
       </section>
 
-      <main className="container py-3 md:py-4">
+      <main className="container py-2 md:py-3">
         {game.id === "flashmath" && (
-          <div className="mb-3">
+          <div className="mb-2">
             <PracticeStats game="flashmath" refreshKey={refreshKey} />
           </div>
         )}
@@ -102,8 +102,8 @@ const Play = () => {
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-md border border-border bg-card p-4 md:p-5">
+        <div className="grid gap-3 lg:grid-cols-[1fr_360px]">
+          <div className="rounded-md border border-border bg-card p-3 md:p-4">
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
             {game.id === "flashmath" && (

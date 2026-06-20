@@ -274,7 +274,7 @@ export function FlashMathGame({
 
   if (phase === "config") {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -283,13 +283,13 @@ export function FlashMathGame({
         </div>
 
         {mistakeMode && (
-          <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
+          <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-[11px] text-destructive">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span>「只练错题」已开启：本局题目将从你的错题池抽取，配置仅影响闪现速度。</span>
+            <span>「只练错题」已开启：题目将从错题池抽取，配置仅影响闪现速度。</span>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <ConfigItem label="笔数" hint="1 – 200">
             <NumInput value={cfg.count} onChange={(n) => setCfg({ ...cfg, count: n })} min={1} max={200} suffix="笔" />
           </ConfigItem>
@@ -325,16 +325,16 @@ export function FlashMathGame({
           ))}
         </div>
 
-        <Button onClick={beginCountdown} className="mt-1">
+        <Button onClick={beginCountdown} className="mt-0.5">
           <Play className="mr-2 h-3.5 w-3.5" /> 开始挑战
         </Button>
 
-        <div className="rounded-md border border-border bg-muted/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="rounded-md border border-border bg-muted/40 p-2 text-[11px] leading-relaxed text-muted-foreground">
           <div className="flex items-center justify-between">
             <span>本配置答对一题可获</span>
-            <span className="font-mono-tabular text-base font-semibold text-primary">{previewScore(cfg)} 分</span>
+            <span className="font-mono-tabular text-sm font-semibold text-primary">{previewScore(cfg)} 分</span>
           </div>
-          <div className="mt-1 text-[10px]">
+          <div className="mt-0.5 text-[10px]">
             积分 = 笔数 × 位数权重(1/1.4/2/2.8/3.8/5/6.5) × 速度系数(1000/ms) × 减法系数(1.3)
           </div>
         </div>
@@ -489,12 +489,12 @@ export function FlashMathGame({
 
 function ConfigItem({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-border bg-card p-3">
+    <div className="rounded-md border border-border bg-card p-2.5">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold">{label}</span>
         {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       </div>
-      <div className="mt-2">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }
