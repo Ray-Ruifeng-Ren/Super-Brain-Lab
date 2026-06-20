@@ -274,7 +274,7 @@ export function FlashMathGame({
 
   if (phase === "config") {
     return (
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -283,7 +283,7 @@ export function FlashMathGame({
         </div>
 
         {mistakeMode && (
-          <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-[11px] text-destructive">
+          <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-[11px] text-destructive">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span>「只练错题」已开启：题目将从错题池抽取，配置仅影响闪现速度。</span>
           </div>
@@ -307,29 +307,30 @@ export function FlashMathGame({
           </ConfigItem>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">速度预设</span>
-          {[1000, 700, 500, 300, 200].map((ms) => (
-            <button
-              key={ms}
-              onClick={() => setCfg({ ...cfg, speedMs: ms })}
-              className={cn(
-                "rounded-md border px-2 py-0.5 font-mono-tabular text-[11px] transition-colors",
-                cfg.speedMs === ms
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
-              )}
-            >
-              {ms}ms
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-muted-foreground">速度预设</span>
+            {[1000, 700, 500, 300, 200].map((ms) => (
+              <button
+                key={ms}
+                onClick={() => setCfg({ ...cfg, speedMs: ms })}
+                className={cn(
+                  "rounded-md border px-2 py-0.5 font-mono-tabular text-[11px] transition-colors",
+                  cfg.speedMs === ms
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                )}
+              >
+                {ms}ms
+              </button>
+            ))}
+          </div>
+          <Button onClick={beginCountdown} size="sm">
+            <Play className="mr-1.5 h-3.5 w-3.5" /> 开始挑战
+          </Button>
         </div>
 
-        <Button onClick={beginCountdown} className="mt-0.5">
-          <Play className="mr-2 h-3.5 w-3.5" /> 开始挑战
-        </Button>
-
-        <div className="rounded-md border border-border bg-muted/40 p-2 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
           <div className="flex items-center justify-between">
             <span>本配置答对一题可获</span>
             <span className="font-mono-tabular text-sm font-semibold text-primary">{previewScore(cfg)} 分</span>
