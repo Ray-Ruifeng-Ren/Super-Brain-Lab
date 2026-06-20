@@ -291,13 +291,70 @@ export function FlashMathGame({
 
         <div className="grid grid-cols-2 gap-2">
           <ConfigItem label="笔数" hint="1 – 200">
-            <NumInput value={cfg.count} onChange={(n) => setCfg({ ...cfg, count: n })} min={1} max={200} suffix="笔" />
+            <div className="flex flex-wrap items-center gap-1">
+              {[5, 10, 15, 20, 30].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setCfg({ ...cfg, count: n })}
+                  className={cn(
+                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    cfg.count === n
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  )}
+                >
+                  {n}笔
+                </button>
+              ))}
+              <span className="text-[10px] text-muted-foreground">或</span>
+              <NumInput value={cfg.count} onChange={(n) => setCfg({ ...cfg, count: n })} min={1} max={200} suffix="笔" />
+            </div>
           </ConfigItem>
           <ConfigItem label="位数" hint="1 – 7 位">
-            <NumInput value={cfg.digits} onChange={(n) => setCfg({ ...cfg, digits: n })} min={1} max={7} suffix="位" />
+            <div className="flex flex-wrap items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setCfg({ ...cfg, digits: n })}
+                  className={cn(
+                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    cfg.digits === n
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  )}
+                >
+                  {n}位
+                </button>
+              ))}
+              <span className="text-[10px] text-muted-foreground">或</span>
+              <NumInput value={cfg.digits} onChange={(n) => setCfg({ ...cfg, digits: n })} min={1} max={7} suffix="位" />
+            </div>
           </ConfigItem>
           <ConfigItem label="单笔时间" hint="150 – 5000 ms">
-            <NumInput value={cfg.speedMs} onChange={(n) => setCfg({ ...cfg, speedMs: n })} min={150} max={5000} suffix="ms" />
+            <div className="flex flex-wrap items-center gap-1">
+              {[
+                { label: "0.1秒", value: 100 },
+                { label: "0.3秒", value: 300 },
+                { label: "0.5秒", value: 500 },
+                { label: "1秒", value: 1000 },
+                { label: "1.5秒", value: 1500 },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setCfg({ ...cfg, speedMs: t.value })}
+                  className={cn(
+                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    cfg.speedMs === t.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <span className="text-[10px] text-muted-foreground">或</span>
+              <NumInput value={cfg.speedMs} onChange={(n) => setCfg({ ...cfg, speedMs: n })} min={150} max={5000} suffix="ms" />
+            </div>
           </ConfigItem>
           <ConfigItem label="减法" hint="至多一个减号">
             <div className="flex gap-1.5">
@@ -307,28 +364,9 @@ export function FlashMathGame({
           </ConfigItem>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground">速度预设</span>
-            {[1000, 700, 500, 300, 200].map((ms) => (
-              <button
-                key={ms}
-                onClick={() => setCfg({ ...cfg, speedMs: ms })}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono-tabular text-[11px] transition-colors",
-                  cfg.speedMs === ms
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                )}
-              >
-                {ms}ms
-              </button>
-            ))}
-          </div>
-          <Button onClick={beginCountdown} size="sm">
-            <Play className="mr-1.5 h-3.5 w-3.5" /> 开始挑战
-          </Button>
-        </div>
+        <Button onClick={beginCountdown} size="sm">
+          <Play className="mr-1.5 h-3.5 w-3.5" /> 开始挑战
+        </Button>
 
         <div className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
           <div className="flex items-center justify-between">
