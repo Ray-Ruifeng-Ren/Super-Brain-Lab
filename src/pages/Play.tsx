@@ -12,6 +12,7 @@ import { GauntletFlashGame } from "@/components/games/GauntletFlashGame";
 import { DEFAULT_GAUNTLET, encodeMode, type GauntletConfig } from "@/lib/gauntlet";
 import { ProLeaderboard } from "@/components/ProLeaderboard";
 import { AccountMenu } from "@/components/AccountMenu";
+import { PracticeLog } from "@/components/PracticeLog";
 import { cn } from "@/lib/utils";
 
 const Play = () => {
@@ -20,6 +21,7 @@ const Play = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [schulteSize, setSchulteSize] = useState(4);
   const [flashCfg, setFlashCfg] = useState<FlashCfg>({ count: 5, digits: 2, speedMs: 700, includeSub: false });
+  const [flashMistakeMode, setFlashMistakeMode] = useState(false);
   const [nbackCfg, setNbackCfg] = useState({ n: 2, trials: 20, intervalMs: 2000 });
   const [orbitMode, setOrbitMode] = useState<string>("overall");
   const [gauntletCfg, setGauntletCfg] = useState<GauntletConfig>(DEFAULT_GAUNTLET);
