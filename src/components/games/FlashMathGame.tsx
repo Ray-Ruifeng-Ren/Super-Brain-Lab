@@ -118,16 +118,16 @@ function NumInput({
     else setText(String(value));
   };
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <Input
         inputMode="numeric"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={(e) => commit(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        className="h-9 w-20 rounded-md border-border bg-background text-center font-mono-tabular text-sm font-medium"
+        className="h-7 w-16 rounded-md border-border bg-background px-1 py-0 text-center font-mono-tabular text-[11px] font-medium"
       />
-      {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
+      {suffix && <span className="text-[10px] text-muted-foreground">{suffix}</span>}
     </div>
   );
 }
