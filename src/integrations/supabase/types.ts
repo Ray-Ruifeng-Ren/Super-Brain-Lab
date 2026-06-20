@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      practice_attempts: {
+        Row: {
+          answer: number
+          correct: boolean
+          created_at: string
+          game: string
+          id: string
+          mode: string
+          signs: string[]
+          terms: number[]
+          used_ms: number
+          user_answer: number | null
+          user_id: string
+        }
+        Insert: {
+          answer: number
+          correct: boolean
+          created_at?: string
+          game: string
+          id?: string
+          mode?: string
+          signs: string[]
+          terms: number[]
+          used_ms?: number
+          user_answer?: number | null
+          user_id: string
+        }
+        Update: {
+          answer?: number
+          correct?: boolean
+          created_at?: string
+          game?: string
+          id?: string
+          mode?: string
+          signs?: string[]
+          terms?: number[]
+          used_ms?: number
+          user_answer?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
