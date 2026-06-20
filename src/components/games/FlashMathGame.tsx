@@ -233,6 +233,7 @@ export function FlashMathGame({
   useEffect(() => {
     if (phase !== "playing" || !problem) return;
     if (stepIdx >= problem.terms.length) {
+      startTimeRef.current = Date.now();
       setPhase("answer");
       return;
     }
