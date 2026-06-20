@@ -38,9 +38,15 @@ class ShuffleBag {
 /** Generate `count` numbers, each `digits` long, with the rules above. */
 export function generateTerms(count: number, digits: number): number[] {
   // One bag per place. Place 0 = leading; if digits >= 2 it excludes 0.
+  // Additionally: for 1-digit problems, exclude 0 entirely (single "0" terms
+  // are not useful). For 2-digit problems, exclude 0 from every place to avoid
+  // any zero digit (per spec: "尽量别出 0").
+  const excludeZeroAllPlaces = digits <= 2;
   const bags: ShuffleBag[] = [];
   for (let p = 0; p < digits; p++) {
-    bags.push(new ShuffleBag(p === 0 && digits > 1 ? 0 : undefined));
+    const exclude =
+      excludeZeroAllPlaces || (p === 0 && digits > 1) ? 0 : undefined;
+    bags.push(new ShuffleBag(exclude));
   }
 
   const terms: number[] = [];
