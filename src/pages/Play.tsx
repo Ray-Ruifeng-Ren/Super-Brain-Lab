@@ -97,7 +97,13 @@ const Play = () => {
           <div className="rounded-md border border-border bg-card p-5 md:p-6">
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
-            {game.id === "flashmath" && <FlashMathGame onFinished={handleFinished} onCfgChange={setFlashCfg} />}
+            {game.id === "flashmath" && (
+              <FlashMathGame
+                onFinished={handleFinished}
+                onCfgChange={setFlashCfg}
+                mistakeMode={flashMistakeMode}
+              />
+            )}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
             {game.id === "cards" && <CardMemoryGame />}
             {game.id === "orbit" && <OrbitFocusGame onFinished={handleFinished} />}
