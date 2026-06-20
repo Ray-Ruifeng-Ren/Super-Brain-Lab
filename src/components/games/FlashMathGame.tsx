@@ -326,7 +326,7 @@ export function FlashMathGame({
                   key={n}
                   onClick={() => setCfg({ ...cfg, count: n })}
                   className={cn(
-                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    "inline-flex h-7 items-center justify-center rounded-md border px-2.5 text-[11px] font-medium transition-colors",
                     cfg.count === n
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
@@ -346,7 +346,7 @@ export function FlashMathGame({
                   key={n}
                   onClick={() => setCfg({ ...cfg, digits: n })}
                   className={cn(
-                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    "inline-flex h-7 items-center justify-center rounded-md border px-2.5 text-[11px] font-medium transition-colors",
                     cfg.digits === n
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
@@ -372,7 +372,7 @@ export function FlashMathGame({
                   key={t.value}
                   onClick={() => setCfg({ ...cfg, speedMs: t.value })}
                   className={cn(
-                    "rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                    "inline-flex h-7 items-center justify-center rounded-md border px-2.5 text-[11px] font-medium transition-colors",
                     cfg.speedMs === t.value
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
