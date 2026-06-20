@@ -257,6 +257,13 @@ export function FlashMathGame({
           </span>
         </div>
 
+        {mistakeMode && (
+          <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>「只练错题」已开启：本局题目将从你的错题池抽取，配置仅影响闪现速度。</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <ConfigItem label="笔数" hint="1 – 200">
             <NumInput value={cfg.count} onChange={(n) => setCfg({ ...cfg, count: n })} min={1} max={200} suffix="笔" />
