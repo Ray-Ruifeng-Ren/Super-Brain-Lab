@@ -180,7 +180,7 @@ const Play = () => {
               </div>
             )}
             {game.id === "flashmath" ? (
-              <>
+              <div className="grid grid-cols-2 gap-3">
                 <PracticeLog
                   game="flashmath"
                   refreshKey={refreshKey}
@@ -192,7 +192,7 @@ const Play = () => {
                   mistakeMode={flashMistakeMode}
                   onMistakeModeChange={setFlashMistakeMode}
                 />
-              </>
+              </div>
             ) : (
               <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
             )}
