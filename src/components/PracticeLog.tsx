@@ -49,8 +49,8 @@ export function PracticeLog({ game, refreshKey, extraTab }: Props) {
   );
 
   return (
-    <div className="rounded-md border border-border bg-card">
-      <Tabs defaultValue="log">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card">
+      <Tabs defaultValue="log" className="flex-1 flex flex-col">
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <div className="flex items-center gap-1.5">
             <BookOpen className="h-3 w-3 text-muted-foreground" />
@@ -69,16 +69,16 @@ export function PracticeLog({ game, refreshKey, extraTab }: Props) {
         </div>
 
         {extraTab && (
-          <TabsContent value="board" className="m-0 p-0">
+          <TabsContent value="board" className="m-0 flex-1 overflow-auto p-0">
             {extraTab}
           </TabsContent>
         )}
 
-        <TabsContent value="log" className="m-0 p-3">
+        <TabsContent value="log" className="m-0 flex-1 overflow-auto p-3">
           {loading ? (
-            <div className="py-6 text-center text-xs text-muted-foreground">加载中…</div>
+            <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">加载中…</div>
           ) : rows.length === 0 ? (
-            <div className="py-6 text-center text-xs text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">
               登录后开始练习，这里会记录每一题。
             </div>
           ) : (

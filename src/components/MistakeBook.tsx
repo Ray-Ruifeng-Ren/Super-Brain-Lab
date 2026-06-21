@@ -32,7 +32,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
   }, [game, refreshKey]);
 
   return (
-    <div className="rounded-md border border-border bg-card">
+    <div className="flex h-full flex-col rounded-md border border-border bg-card">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex items-center gap-1.5">
           <AlertTriangle className="h-3 w-3 text-muted-foreground" />
@@ -47,7 +47,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
         </div>
       </div>
 
-      <div className="p-3">
+      <div className="flex flex-1 flex-col overflow-hidden p-3">
         <div className="mb-2 flex items-center justify-between rounded-md border border-border bg-muted/30 px-2.5 py-1.5">
           <div>
             <div className="text-xs font-medium">只练错题</div>
@@ -60,13 +60,15 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
           />
         </div>
         {loading ? (
-          <div className="py-6 text-center text-xs text-muted-foreground">加载中…</div>
+          <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
+            加载中…
+          </div>
         ) : wrong.length === 0 ? (
-          <div className="py-6 text-center text-xs text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
             还没有错题，继续保持 👍
           </div>
         ) : (
-          <ul className="max-h-64 space-y-1 overflow-y-auto pr-1">
+          <ul className="flex-1 space-y-1 overflow-y-auto pr-1">
             {wrong.map((w) => (
               <li
                 key={w.id}
