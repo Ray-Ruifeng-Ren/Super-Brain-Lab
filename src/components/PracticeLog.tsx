@@ -1,22 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { CalendarDays, AlertTriangle, BookOpen } from "lucide-react";
+import { CalendarDays, BookOpen } from "lucide-react";
 import {
   fetchAttempts,
-  fetchWrongAttempts,
   groupByDay,
-  formatExpr,
   type AttemptRow,
 } from "@/lib/practiceLog";
 
 interface Props {
   game: string;
   refreshKey?: number;
-  mistakeMode: boolean;
-  onMistakeModeChange: (v: boolean) => void;
   extraTab?: React.ReactNode;
 }
 
