@@ -320,7 +320,7 @@ export function FlashMathGame({
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <ConfigItem label="笔数" hint="1 – 200">
             <div className="flex flex-wrap items-center gap-1">
               {[5, 10, 15, 20, 30].map((n) => (
