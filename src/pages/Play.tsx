@@ -13,6 +13,7 @@ import { DEFAULT_GAUNTLET, encodeMode, type GauntletConfig } from "@/lib/gauntle
 import { ProLeaderboard } from "@/components/ProLeaderboard";
 import { AccountMenu } from "@/components/AccountMenu";
 import { PracticeLog } from "@/components/PracticeLog";
+import { MistakeBook } from "@/components/MistakeBook";
 import { PracticeStats } from "@/components/PracticeStats";
 import { cn } from "@/lib/utils";
 
@@ -179,13 +180,19 @@ const Play = () => {
               </div>
             )}
             {game.id === "flashmath" ? (
-              <PracticeLog
-                game="flashmath"
-                refreshKey={refreshKey}
-                mistakeMode={flashMistakeMode}
-                onMistakeModeChange={setFlashMistakeMode}
-                extraTab={<ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />}
-              />
+              <>
+                <PracticeLog
+                  game="flashmath"
+                  refreshKey={refreshKey}
+                  extraTab={<ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />}
+                />
+                <MistakeBook
+                  game="flashmath"
+                  refreshKey={refreshKey}
+                  mistakeMode={flashMistakeMode}
+                  onMistakeModeChange={setFlashMistakeMode}
+                />
+              </>
             ) : (
               <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
             )}
