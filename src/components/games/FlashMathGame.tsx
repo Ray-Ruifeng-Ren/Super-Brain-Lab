@@ -395,8 +395,8 @@ export function FlashMathGame({
           </ConfigItem>
         </div>
 
-        <Button onClick={beginCountdown} size="sm">
-          <Play className="mr-1.5 h-3.5 w-3.5" /> 开始挑战
+        <Button onClick={beginCountdown}>
+          <Play className="mr-1.5 h-4 w-4" /> 开始挑战
         </Button>
 
         <div className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
@@ -559,12 +559,12 @@ export function FlashMathGame({
 
 function ConfigItem({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-border bg-card p-2.5">
+    <div className="rounded-md border border-border bg-card p-4">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold">{label}</span>
         {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       </div>
-      <div className="mt-1.5">{children}</div>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
