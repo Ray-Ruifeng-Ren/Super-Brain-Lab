@@ -22,9 +22,9 @@ export function PracticeStats({ game, refreshKey }: Props) {
     return () => { live = false; };
   }, [game, refreshKey]);
 
-  const { streak, total, accuracy, distinctDays } = useMemo(() => {
+  const { streak, total, accuracy, distinctDays, todayCount } = useMemo(() => {
     if (rows.length === 0)
-      return { streak: 0, total: 0, accuracy: 0, distinctDays: 0 };
+      return { streak: 0, total: 0, accuracy: 0, distinctDays: 0, todayCount: 0 };
     const byDay = groupByDay(rows);
     let total = 0, correct = 0;
     for (const r of rows) {
@@ -32,6 +32,12 @@ export function PracticeStats({ game, refreshKey }: Props) {
       if (r.correct) correct += 1;
     }
     const distinctDays = byDay.size;
+
+    // today count
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todayCount = byDay.get(todayKey)?.total ?? 0;
 
     // streak: consecutive days ending today (or yesterday if today empty)
     const has = (d: Date) => {
@@ -51,6 +57,7 @@ export function PracticeStats({ game, refreshKey }: Props) {
       total,
       accuracy: Math.round((correct / total) * 100),
       distinctDays,
+      todayCount,
     };
   }, [rows]);
 
