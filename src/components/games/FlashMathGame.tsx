@@ -426,7 +426,28 @@ export function FlashMathGame({
               <Pill active={cfg.includeSub} onClick={() => setCfg({ ...cfg, includeSub: true })}>有</Pill>
             </div>
           </ConfigItem>
+          <ConfigItem label="连续场数" hint="答完即下一场">
+            <div className="flex flex-wrap items-center gap-1">
+              {[1, 5, 10, 20, 50].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setCfg({ ...cfg, rounds: n })}
+                  className={cn(
+                    "inline-flex h-7 items-center justify-center rounded-md border px-2.5 text-[11px] font-medium transition-colors",
+                    cfg.rounds === n
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  )}
+                >
+                  {n}场
+                </button>
+              ))}
+              <span className="text-[10px] text-muted-foreground">或</span>
+              <NumInput value={[1,5,10,20,50].includes(cfg.rounds) ? null : cfg.rounds} onChange={(n) => setCfg({ ...cfg, rounds: n })} min={1} max={200} suffix="场" />
+            </div>
+          </ConfigItem>
         </div>
+
 
         <Button onClick={beginCountdown}>
           <Play className="mr-1.5 h-4 w-4" /> 开始挑战
