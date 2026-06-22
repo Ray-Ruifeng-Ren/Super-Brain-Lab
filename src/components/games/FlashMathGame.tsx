@@ -594,18 +594,52 @@ export function FlashMathGame({
           <div className="text-[11px] text-muted-foreground">分</div>
         </div>
         {cfg.rounds > 1 && (
-          <div className="w-full rounded-md border border-primary/30 bg-primary/5 p-3 text-center">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">本轮 {cfg.rounds} 场总计</div>
+          <div className="w-full rounded-md border border-primary/30 bg-primary/5 p-3">
+            <div className="text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground">本轮 {cfg.rounds} 场总计</div>
             <div className="mt-1 flex items-center justify-center gap-4 font-mono-tabular">
-              <div>
+              <div className="text-center">
                 <div className="text-xl font-semibold text-foreground">{session.correct} / {cfg.rounds}</div>
                 <div className="text-[10px] text-muted-foreground">正确</div>
               </div>
               <div className="h-8 w-px bg-border" />
-              <div>
+              <div className="text-center">
                 <div className="text-xl font-semibold text-primary">{session.totalScore}</div>
                 <div className="text-[10px] text-muted-foreground">总分</div>
               </div>
+            </div>
+            <div className="mt-3 max-h-60 overflow-y-auto rounded-md border border-border bg-card">
+              <table className="w-full font-mono-tabular text-[11px]">
+                <thead className="sticky top-0 bg-muted/60 text-muted-foreground">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium">#</th>
+                    <th className="px-2 py-1 text-left font-medium">算式</th>
+                    <th className="px-2 py-1 text-right font-medium">答案</th>
+                    <th className="px-2 py-1 text-right font-medium">你的</th>
+                    <th className="px-2 py-1 text-right font-medium">得分</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {session.history.map((r, i) => (
+                    <tr key={i} className={cn("border-t border-border", r.correct ? "" : "bg-destructive/5")}>
+                      <td className="px-2 py-1 text-muted-foreground">{i + 1}</td>
+                      <td className="px-2 py-1 break-all">
+                        {r.problem.terms
+                          .map((t, j) => {
+                            const s = r.problem.signs[j];
+                            if (j === 0) return s === "-" ? `−${t}` : `${t}`;
+                            return s === "-" ? ` − ${t}` : ` + ${t}`;
+                          })
+                          .join("")}
+                      </td>
+                      <td className="px-2 py-1 text-right">{r.problem.answer}</td>
+                      <td className={cn("px-2 py-1 text-right", r.correct ? "text-primary" : "text-destructive")}>
+                        {r.answered}
+                      </td>
+                      <td className="px-2 py-1 text-right text-muted-foreground">{r.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
