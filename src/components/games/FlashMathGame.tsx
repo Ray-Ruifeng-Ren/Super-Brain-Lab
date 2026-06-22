@@ -586,6 +586,22 @@ export function FlashMathGame({
           </div>
           <div className="text-[11px] text-muted-foreground">分</div>
         </div>
+        {cfg.rounds > 1 && (
+          <div className="w-full rounded-md border border-primary/30 bg-primary/5 p-3 text-center">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">本轮 {cfg.rounds} 场总计</div>
+            <div className="mt-1 flex items-center justify-center gap-4 font-mono-tabular">
+              <div>
+                <div className="text-xl font-semibold text-foreground">{session.correct} / {cfg.rounds}</div>
+                <div className="text-[10px] text-muted-foreground">正确</div>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <div className="text-xl font-semibold text-primary">{session.totalScore}</div>
+                <div className="text-[10px] text-muted-foreground">总分</div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="w-full rounded-md border border-border p-3 text-center">
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">正确答案</div>
           <div className="my-0.5 font-mono-tabular text-2xl font-semibold">{problem.answer}</div>
