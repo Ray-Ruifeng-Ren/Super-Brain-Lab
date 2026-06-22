@@ -17,9 +17,10 @@ export interface FlashCfg {
   digits: number;
   speedMs: number;
   includeSub: boolean;
+  rounds: number;
 }
 
-const DEFAULT_CFG: FlashCfg = { count: 5, digits: 2, speedMs: 700, includeSub: false };
+const DEFAULT_CFG: FlashCfg = { count: 5, digits: 2, speedMs: 700, includeSub: false, rounds: 1 };
 const CFG_STORAGE_KEY = "flashmath:lastCfg";
 
 function loadStoredCfg(): FlashCfg {
@@ -33,6 +34,7 @@ function loadStoredCfg(): FlashCfg {
       digits: Math.min(7, Math.max(1, Number(p.digits) || DEFAULT_CFG.digits)),
       speedMs: Math.min(5000, Math.max(150, Number(p.speedMs) || DEFAULT_CFG.speedMs)),
       includeSub: !!p.includeSub,
+      rounds: Math.min(200, Math.max(1, Number(p.rounds) || DEFAULT_CFG.rounds)),
     };
   } catch {
     return DEFAULT_CFG;
