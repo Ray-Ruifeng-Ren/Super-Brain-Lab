@@ -282,7 +282,7 @@ export function FlashMathGame({
     setResult(null);
     setStepIdx(0);
     setIsReplay(false);
-    setSession({ round: 0, correct: 0, totalScore: 0 });
+    setSession({ round: 0, correct: 0, totalScore: 0, history: [] });
   };
 
   const beginCountdown = async () => {
@@ -296,7 +296,7 @@ export function FlashMathGame({
     setStepIdx(0);
     setInput("");
     setResult(null);
-    setSession({ round: 0, correct: 0, totalScore: 0 });
+    setSession({ round: 0, correct: 0, totalScore: 0, history: [] });
     setPhase("ready");
   };
 
