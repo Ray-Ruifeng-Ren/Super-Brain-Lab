@@ -513,7 +513,12 @@ export function FlashMathGame({
     return (
       <div className="flex flex-col items-center gap-4">
         <div className="text-center">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">输入答案</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            输入答案
+            {cfg.rounds > 1 && (
+              <span className="ml-2 text-primary">第 {session.round + 1} / {cfg.rounds} 场</span>
+            )}
+          </div>
         </div>
         <div className="w-full max-w-sm">
           <Input
