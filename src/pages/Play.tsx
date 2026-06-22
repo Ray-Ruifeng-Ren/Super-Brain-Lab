@@ -104,6 +104,7 @@ const Play = () => {
                 onFinished={handleFinished}
                 onCfgChange={setFlashCfg}
                 mistakeMode={flashMistakeMode}
+                onMistakeModeChange={setFlashMistakeMode}
               />
             )}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
@@ -172,17 +173,19 @@ const Play = () => {
               </div>
             )}
             {game.id === "flashmath" ? (
-              <div className="grid grid-cols-[1.2fr_1fr] gap-3 h-full">
+              <div className="h-full min-h-[520px]">
                 <PracticeLog
                   game="flashmath"
                   refreshKey={refreshKey}
                   extraTab={<ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />}
-                />
-                <MistakeBook
-                  game="flashmath"
-                  refreshKey={refreshKey}
-                  mistakeMode={flashMistakeMode}
-                  onMistakeModeChange={setFlashMistakeMode}
+                  mistakeTab={
+                    <MistakeBook
+                      game="flashmath"
+                      refreshKey={refreshKey}
+                      mistakeMode={flashMistakeMode}
+                      onMistakeModeChange={setFlashMistakeMode}
+                    />
+                  }
                 />
               </div>
             ) : (

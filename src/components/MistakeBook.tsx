@@ -32,26 +32,17 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
   }, [game, refreshKey]);
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <AlertTriangle className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            错题本
-          </span>
-          {wrong.length > 0 && (
-            <span className="rounded bg-destructive/10 px-1 font-mono-tabular text-[10px] text-destructive">
-              {wrong.length}
-            </span>
-          )}
-        </div>
-      </div>
-
+    <div className="flex h-full flex-col">
       <div className="flex flex-1 flex-col overflow-hidden p-3">
         <div className="mb-2 flex items-center justify-between rounded-md border border-border bg-muted/30 px-2.5 py-1.5">
-          <div>
-            <div className="text-xs font-medium">只练错题</div>
-            <div className="text-[10px] text-muted-foreground">下一局从错题池抽题</div>
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs font-medium">只练错题</span>
+            {wrong.length > 0 && (
+              <span className="rounded bg-destructive/10 px-1 font-mono-tabular text-[10px] text-destructive">
+                {wrong.length}
+              </span>
+            )}
           </div>
           <Switch
             checked={mistakeMode}
