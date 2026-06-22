@@ -185,8 +185,9 @@ export function FlashMathGame({
   const [input, setInput] = useState("");
   const [result, setResult] = useState<{ correct: boolean; score: number; answered: number } | null>(null);
   const [isReplay, setIsReplay] = useState(false);
-  const [session, setSession] = useState<{ round: number; correct: number; totalScore: number }>(
-    { round: 0, correct: 0, totalScore: 0 },
+  type RoundRecord = { problem: Problem; answered: number; correct: boolean; score: number };
+  const [session, setSession] = useState<{ round: number; correct: number; totalScore: number; history: RoundRecord[] }>(
+    { round: 0, correct: 0, totalScore: 0, history: [] },
   );
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
