@@ -12,9 +12,10 @@ interface Props {
   game: string;
   refreshKey?: number;
   extraTab?: React.ReactNode;
+  mistakeTab?: React.ReactNode;
 }
 
-export function PracticeLog({ game, refreshKey, extraTab }: Props) {
+export function PracticeLog({ game, refreshKey, extraTab, mistakeTab }: Props) {
   const [rows, setRows] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState<Date>(new Date());
