@@ -309,11 +309,19 @@ export function FlashMathGame({
   if (phase === "config") {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            训练配置
-          </span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              训练配置
+            </span>
+          </div>
+          {onMistakeModeChange && (
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>只练错题</span>
+              <Switch checked={mistakeMode} onCheckedChange={onMistakeModeChange} />
+            </label>
+          )}
         </div>
 
         {mistakeMode && (
