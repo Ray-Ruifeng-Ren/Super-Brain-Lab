@@ -62,13 +62,16 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
           </div>
         ) : (
           <ul className="flex-1 space-y-1 overflow-y-auto pr-1">
-            {wrong.map((w) => (
+            {wrong.map((w, idx) => (
               <li key={w.id}>
                 <button
                   type="button"
-                  onClick={() => setSelected(w)}
-                  className="flex w-full items-center justify-between rounded-md border border-border bg-background px-2 py-1 text-left transition-colors hover:border-primary/40 hover:bg-muted/40"
+                  onClick={() => setSelectedIdx(idx)}
+                  className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-2 py-1 text-left transition-colors hover:border-primary/40 hover:bg-muted/40"
                 >
+                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono-tabular text-[10px] text-muted-foreground">
+                    #{idx + 1}
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-mono-tabular text-[11px]">
                       {formatExpr(w.terms, w.signs)} = {w.answer}
@@ -90,7 +93,12 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
           </ul>
         )}
       </div>
-      <AbacusDetail attempt={selected} onClose={() => setSelected(null)} />
+      <AbacusDetail
+        attempts={wrong}
+        index={selectedIdx}
+        onIndexChange={setSelectedIdx}
+        onClose={() => setSelectedIdx(null)}
+      />
     </div>
   );
 }
