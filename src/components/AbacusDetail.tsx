@@ -100,26 +100,30 @@ export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props)
     setStep(1);
   }, [attempt?.id]);
 
-  if (!attempt || index === null) return null;
   const n = steps.length;
   const cur = steps[step - 1];
   const final = steps[n - 1]?.running ?? 0;
-  const columns = Math.max(3, Math.abs(final).toString().length, Math.abs(cur?.running ?? 0).toString().length);
+  const columns = Math.max(
+    3,
+    Math.abs(final).toString().length,
+    Math.abs(cur?.running ?? 0).toString().length,
+  );
 
-  const hasPrev = step > 1 || index > 0;
-  const hasNext = step < n || index < attempts.length - 1;
+  const hasPrev = attempt !== null && index !== null && (step > 1 || index > 0);
+  const hasNext =
+    attempt !== null && index !== null && (step < n || index < attempts.length - 1);
 
   const goNext = () => {
+    if (index === null || !attempt) return;
     if (step < n) setStep(step + 1);
     else if (index < attempts.length - 1) onIndexChange(index + 1);
   };
   const goPrev = () => {
+    if (index === null || !attempt) return;
     if (step > 1) setStep(step - 1);
     else if (index > 0) {
-      // jump to previous attempt's last step
       const prevAttempt = attempts[index - 1];
       onIndexChange(index - 1);
-      // set step after the attempt change effect resets to 1
       setTimeout(() => setStep(prevAttempt.terms.length), 0);
     }
   };
@@ -138,6 +142,8 @@ export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props)
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  if (!attempt || index === null) return null;
 
   return (
     <Dialog open={!!attempt} onOpenChange={(o) => !o && onClose()}>
