@@ -6,6 +6,7 @@ import {
   formatExpr,
   type AttemptRow,
 } from "@/lib/practiceLog";
+import { AbacusDetail } from "./AbacusDetail";
 
 interface Props {
   game: string;
