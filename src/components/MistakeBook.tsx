@@ -18,6 +18,7 @@ interface Props {
 export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange }: Props) {
   const [wrong, setWrong] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<AttemptRow | null>(null);
 
   useEffect(() => {
     let live = true;
