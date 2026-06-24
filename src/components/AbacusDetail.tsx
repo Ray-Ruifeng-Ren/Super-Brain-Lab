@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import type { AttemptRow } from "@/lib/practiceLog";
 
 interface Props {
-  attempt: AttemptRow | null;
+  attempts: AttemptRow[];
+  index: number | null;
+  onIndexChange: (i: number | null) => void;
   onClose: () => void;
 }
 
@@ -72,8 +74,9 @@ function Abacus({ value, columns }: { value: number; columns: number }) {
   );
 }
 
-export function AbacusDetail({ attempt, onClose }: Props) {
+export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props) {
   const [step, setStep] = useState(1);
+  const attempt = index !== null ? attempts[index] ?? null : null;
 
   // Compute running sums per step (1..n = after applying term i)
   const steps = useMemo(() => {
@@ -97,17 +100,40 @@ export function AbacusDetail({ attempt, onClose }: Props) {
     setStep(1);
   }, [attempt?.id]);
 
-  if (!attempt) return null;
+  if (!attempt || index === null) return null;
   const n = steps.length;
   const cur = steps[step - 1];
   const final = steps[n - 1]?.running ?? 0;
   const columns = Math.max(3, Math.abs(final).toString().length, Math.abs(cur?.running ?? 0).toString().length);
 
+  const hasPrev = step > 1 || index > 0;
+  const hasNext = step < n || index < attempts.length - 1;
+
+  const goNext = () => {
+    if (step < n) setStep(step + 1);
+    else if (index < attempts.length - 1) onIndexChange(index + 1);
+  };
+  const goPrev = () => {
+    if (step > 1) setStep(step - 1);
+    else if (index > 0) {
+      // jump to previous attempt's last step
+      const prevAttempt = attempts[index - 1];
+      onIndexChange(index - 1);
+      // set step after the attempt change effect resets to 1
+      setTimeout(() => setStep(prevAttempt.terms.length), 0);
+    }
+  };
+
   return (
     <Dialog open={!!attempt} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-sm">算珠演示</DialogTitle>
+          <DialogTitle className="flex items-center justify-between text-sm">
+            <span>算珠演示</span>
+            <span className="font-mono-tabular text-xs text-muted-foreground">
+              错题 #{index + 1} / {attempts.length}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
         {/* Expression with highlight */}
@@ -151,24 +177,15 @@ export function AbacusDetail({ attempt, onClose }: Props) {
 
         {/* Controls */}
         <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setStep((s) => Math.max(1, s - 1))}
-            disabled={step <= 1}
-          >
+          <Button variant="outline" size="sm" onClick={goPrev} disabled={!hasPrev}>
             <ChevronLeft className="h-4 w-4" />
-            上一步
+            {step > 1 ? "上一步" : "上一题"}
           </Button>
           <span className="font-mono-tabular text-xs text-muted-foreground">
             {step} / {n}
           </span>
-          <Button
-            size="sm"
-            onClick={() => setStep((s) => Math.min(n, s + 1))}
-            disabled={step >= n}
-          >
-            下一步
+          <Button size="sm" onClick={goNext} disabled={!hasNext}>
+            {step < n ? "下一步" : "下一题"}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -176,3 +193,4 @@ export function AbacusDetail({ attempt, onClose }: Props) {
     </Dialog>
   );
 }
+
