@@ -62,7 +62,7 @@ export async function fetchAttempts(game: string): Promise<AttemptRow[]> {
 }
 
 /** Fetch most recent wrong attempts (for replay). */
-export async function fetchWrongAttempts(game: string, limit = 100): Promise<AttemptRow[]> {
+export async function fetchWrongAttempts(game: string, limit = 1000): Promise<AttemptRow[]> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return [];
