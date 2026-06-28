@@ -224,21 +224,24 @@ export function ModuleCard({
         ))}
 
         {/* TOP BAR — Roman numeral + name + seal */}
-        <div className="relative flex items-center gap-2.5 px-5 pt-5">
+        <div className="relative flex items-start gap-2.5 px-5 pt-5">
           <span
-            className="font-display text-[15px] leading-none"
+            className="font-display text-[15px] leading-[1.15] pt-[1px]"
             style={{ color: p.gild, letterSpacing: "0.14em" }}
           >
             {toRoman(index + 1)}
           </span>
-          <span
-            aria-hidden
-            className="block h-px flex-shrink-0"
-            style={{ width: 10, background: `${p.gild}aa` }}
-          />
           <h3
-            className="flex-1 truncate font-display text-[14px] leading-none"
-            style={{ color: p.ink, letterSpacing: "0.02em" }}
+            className="flex-1 font-display text-[13.5px] leading-[1.18]"
+            style={{
+              color: p.ink,
+              letterSpacing: "0.02em",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              wordBreak: "break-word",
+            }}
             title={name}
           >
             {name}
@@ -257,6 +260,7 @@ export function ModuleCard({
             />
           </span>
         </div>
+
 
         {/* ornamental divider under title */}
         <div className="relative mx-5 mt-2 flex items-center gap-1.5">
