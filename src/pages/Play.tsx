@@ -15,6 +15,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { PracticeLog } from "@/components/PracticeLog";
 import { MistakeBook } from "@/components/MistakeBook";
 import { PracticeStats } from "@/components/PracticeStats";
+import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const Play = () => {
