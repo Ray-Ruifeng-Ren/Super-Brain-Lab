@@ -170,7 +170,7 @@ export function ModuleCard({
             <g clipPath={`url(#arch-${id})`}>
               <foreignObject x="55" y="55" width="90" height="120">
                 <div
-                  xmlns="http://www.w3.org/1999/xhtml"
+                 
                   style={{
                     width: "100%", height: "100%",
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -255,7 +255,7 @@ export function ModuleCard({
             />
             <foreignObject x="32" y="200" width="136" height="14">
               <div
-                xmlns="http://www.w3.org/1999/xhtml"
+               
                 style={{
                   width: "100%", height: "100%",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -286,7 +286,7 @@ export function ModuleCard({
             />
             <foreignObject x="24" y="228" width="152" height="36">
               <div
-                xmlns="http://www.w3.org/1999/xhtml"
+               
                 style={{
                   width: "100%", height: "100%",
                   display: "flex", alignItems: "center", justifyContent: "center",
