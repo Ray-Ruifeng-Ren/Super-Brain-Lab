@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -90,8 +91,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   h1, h2, h3, .font-display {
-    font-family: 'Playfair Display', 'Source Han Serif SC', 'Noto Serif SC', Georgia, serif;
+    font-family: 'Instrument Serif', 'Source Han Serif SC', 'Noto Serif SC', Georgia, serif;
     letter-spacing: -0.02em;
+    font-weight: 400;
   }
   .font-mono-tabular, .tabular {
     font-family: 'JetBrains Mono', ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -120,8 +122,15 @@
 @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / .35); } 50% { box-shadow: 0 0 0 8px hsl(var(--primary) / 0); } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes brain-breath { 0%, 100% { transform: scale(0.995); } 50% { transform: scale(1.012); } }
 .animate-fade-in { animation: fade-in .25s ease-out; }
 .animate-pop-in { animation: pop-in .2s cubic-bezier(.4,0,.2,1); }
 .animate-pulse-glow { animation: pulse-glow 1.6s infinite; }
 .animate-shake { animation: shake .3s; }
 .animate-slide-up { animation: slide-up .3s ease-out; }
+.animate-fade-rise { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) both; }
+.animate-fade-rise-d1 { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) .15s both; }
+.animate-fade-rise-d2 { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) .3s both; }
+.animate-fade-rise-d3 { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) .45s both; }
+.animate-brain-breath { animation: brain-breath 3.4s ease-in-out infinite; }
