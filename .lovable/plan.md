@@ -1,88 +1,118 @@
-## 目标
-把首页 Hero 升级成"局部电影感 + WebGL 神经粒子背景 + 滚动驱动微交互"的高级开场，其他区域保持现有亮色 Anodized Clarity 风格不变。
 
-## 范围
-仅改动：
-- `src/pages/Index.tsx` 顶部公告条 + Hero（首屏 100vh）
-- 新增 `src/components/hero/NeuralCanvas.tsx`（WebGL 粒子）
-- 新增 `src/components/hero/ScrambleText.tsx`、`ScrambleIn.tsx`（轻量，无新增字体依赖）
-- 新增 `src/lib/useLenis.ts`（仅 Hero 区域生效，移动端禁用）
-- `src/index.css` 增加少量动画 keyframes 与 .hero-dark 局部作用域
+# Index 首页升级 · "Super Brain Lab" 高级感重塑
 
-不动：Logo、AccountMenu、Languages、Modules 网格、Values、Footer、全站配色、字体（继续 Playfair + Inter）。
+## 一、目标拆解
 
-## 交互设计
+1. **背景**：去掉死板网格、升级散点动效，换成一个"会律动的大脑"作为视觉锚点。
+2. **布局**：取消"次屏拼凑感"——首屏一次性呈现 7 个项目，去掉"专注/速算/记忆/量化"卖点段落。
+3. **品牌叙事**：体现 Super Brain Lab 的"实验室 / 研究院"高级感，而不是产品官网堆叠。
 
-### 1. 顶部公告条（保留 + 加戏）
-- 文案不变（速算冠军 × MIT）。
-- 左侧脉冲点改为"双层呼吸光晕"（外圈 4s 缓慢、内圈 1.6s）。
-- 文案使用 **ScrambleText hover**：鼠标移入时整行从左到右字符解码一次（25ms/帧，仅一次，不打扰阅读）。
-- 整条加一条 1px 顶部渐变描边（hsl(primary) 透明渐变），强化"产品线"质感。
+---
 
-### 2. Hero 首屏（h-screen，局部深色电影感）
-布局结构（从底到顶 z-index）：
+## 二、视觉与背景方案
+
+### 1. 律动大脑（核心视觉）
+做法：使用 **Three.js + react-three-fiber** 渲染一个由发光节点 + 神经突触线条组成的 **半透明大脑点云**，居中靠右悬浮。
+- 大脑由 ~2500 个粒子按"大脑剪影"分布（用一张大脑轮廓 mask 图采样坐标，或加载一个低面数 brain.glb 顶点）；
+- 节点按 **正弦呼吸 + 柏林噪声漂移** 持续律动（≈ 0.6Hz，模拟脑电节律）；
+- 鼠标靠近时，附近节点"突触放电"——沿邻近节点亮起一条传导光线，2s 后衰减；
+- 全局色：深墨绿背景 (`hsl(160 30% 6%)`) + 主色翠绿光晕，配少量青色冷光高亮——契合现有 emerald 主题，且区别于常见 indigo/紫色 AI 风。
+
+### 2. 替换网格
+删除当前 40px × 40px 网格层。改为一层 **极淡的等高线/拓扑纹理**（SVG 噪声 + 1% 透明度径向遮罩），只在视觉边缘隐约出现，不抢主体。
+
+### 3. 散点优化
+保留 NeuralCanvas 作为大脑"外围漂浮粒子"，但：
+- 降低数量到 40，提高单粒子尺寸 + 模糊；
+- 移除当前线连（线连只留给中央大脑），让外围更像"灵感火花"而非"星空"；
+- 加入 mouse parallax（背景跟随鼠标 ±8px 缓动）。
+
+---
+
+## 三、布局方案 · 一屏式 Lab Console
+
+取消"首屏 + 次屏"双段结构，重新组织为 **单屏 Lab Dashboard 风格**（≥1280×800 一屏看完，更小屏纵向滚动短一段即可）。
+
 ```
-z-0  bg-foreground (深墨)         ← 局部深色，仅 Hero 容器内
-z-1  <NeuralCanvas/>              ← WebGL 神经粒子
-z-5  径向 vignette + 极淡网格       ← 现有装饰升级
-z-10 文案内容（标题/描述/CTA）
-z-20 底部 progressive blur 渐隐    ← 与下方亮色区无缝衔接
+┌─────────────────────────────────────────────────────────────────┐
+│ 顶部公告条：速算冠军 × MIT · Super Brain Lab Research Consortium │
+├─────────────────────────────────────────────────────────────────┤
+│ Header: ◉ Super Brain Lab        [EN/中]  [Account]            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  [LAB · 02]                              ╭──────────────╮       │
+│  Quantify                                │              │       │
+│  the limits of                           │   律动大脑    │       │
+│  human cognition.                        │   (3D 点云)  │       │
+│                                          │              │       │
+│  一句副标 · 实验室定位                    ╰──────────────╯       │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ ── MODULES · 07 ─────────────────────────────────  EST. 2026 ── │
+│                                                                  │
+│  ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐              │
+│  │ 01 │ │ 02 │ │ 03 │ │ 04 │ │ 05 │ │ 06 │ │ 07 │              │
+│  │Flash│ │Gaunt│ │Schul│ │React│ │Nback│ │Card│ │Orbit│         │
+│  └────┘ └────┘ └────┘ └────┘ └────┘ └────┘ └────┘              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**WebGL NeuralCanvas（核心）**
-- 技术：原生 WebGL2（不引入 three.js，包体 < 4KB）。失败回退到 CSS 粒子动画。
-- 视觉：~120 个发光节点 + 邻近连线（距离 < 阈值才连），形成"神经突触网络"。节点缓慢漂移（柏林噪声驱动）。
-- 颜色：节点 hsl(primary/glow) 微调，背景透明，与深色 bg 叠加。
-- 交互：
-  - 鼠标移动产生"引力场"，半径内节点向光标靠拢 + 连线变亮。
-  - 鼠标移开 1.5s 后回归自由漂移。
-  - 移动端：自动降级到 60 节点 + 关闭引力，纯漂移。
-- 性能：requestAnimationFrame，document.hidden 时暂停；DPR 上限 1.5；FPS < 40 自动减半节点。
+### 关键改动
+- **Hero 高度**改为 `min(680px, 70vh)`，给下方 7 项目卡片留出同屏空间；
+- **7 个项目卡**：横向 7 列（`lg:grid-cols-7`，中屏 `md:grid-cols-4`，小屏 2 列）。卡片极简化——只显示编号 / 名称 / 一行 tagline，hover 时展开描述、出现一条进度条状光线。第一个（Flash Math）默认作为 **Today's Pick** 高亮（边框 + 微光）；
+- **删除 Values 区段**（专注/速算/记忆/量化 三栏） + **删除独立 Featured Card**——featured 状态合并到首张项目卡的"今日推荐"高亮里；
+- 底部 footer 极简化为一行（保留版权 + 语言/账户已经在顶部）。
 
-**标题文字（ScrambleIn）**
-- "Quantify Your" / "Cognitive Edge"（英文）或现有 i18n 中文标题。
-- 进入时：每个词字符从随机字符 → 真实字符（900ms，左到右），节奏感来自 Playfair 大字号。
-- 副标题：y:20→0 + opacity 渐入，delay 0.4s。
+### 视觉细节（实验室质感）
+- 模块标题用 `── MODULES · 07 ───────── EST. 2026 ──` 这种 **分隔尺线 + 等宽编号** 排版，类似建筑/实验室档案；
+- 所有数字、tag 用 `font-mono-tabular`，全部大写 + 0.2em 字距；
+- Hero 大标题改双行：`Quantify` + `the limits of human cognition.` —— 比当前 "Today's Pick / Flash Math" 更具品牌野心；
+- 公告条加入小型 system status 风格 token：`◉ LIVE · CONSORTIUM 2026` 这种细节让它更像研究院公告而非营销 banner。
 
-**CTA 按钮**
-- "开始挑战 闪电心算" 保留现有，加 hover：
-  - 背景出现一束"扫光"（::after 渐变从左滑到右，800ms）
-  - 文字 ScrambleText 解码一次
-- "浏览全部" hover 下划线从中心展开（story-link 风格）
+---
 
-### 3. 滚动驱动（Lenis 仅在桌面 Hero 范围）
-- 引入 `lenis` ^1.3.x（轻量 ~8KB），duration 1.2，指数缓动。
-- 移动端 / prefers-reduced-motion：完全禁用，使用原生滚动。
-- Hero 离场动画（scrollYProgress 0 → 0.3）：
-  - 标题 y: 0 → -40，opacity 1 → 0
-  - 粒子画布 scale 1 → 1.06，opacity 1 → 0.3
-  - 底部 blur 从 0 → 20px（progressive backdrop-filter）
-- 用 ref 直接改 transform/style，不走 React state，避免重渲染。
+## 四、技术细节（给开发者看）
 
-### 4. 暗→亮过渡
-- Hero 底部 80px 高度：从 transparent → bg-background 的垂直渐变 + backdrop-blur(8px)，让深色 Hero "溶解"进下方亮色区，不出现硬切。
-- Modules 网格与下方完全不变。
+### 新增依赖
+- `three@^0.160`
+- `@react-three/fiber@^8.18`
+- `@react-three/drei@^9.122`
 
-## 自我批判（已迭代）
-1. **会不会太重？** → 不用 three.js、不加视频、不加新字体；新增 JS < 15KB（lenis 8KB + 自写 WebGL ~3KB + scramble ~2KB）。
-2. **WebGL 在低端机/无 GPU 怎么办？** → 检测 `gl = canvas.getContext('webgl2')`，失败回退到 CSS 关键帧粒子（10 个发光圆点漂浮）。
-3. **深色 Hero 和下方亮色割裂？** → 用 80px 渐变 + blur 过渡带衔接；公告条本来就是深色，视觉上是"深 → 深 → 渐变 → 亮"的自然过渡。
-4. **Scramble 影响可访问性？** → 标题用 aria-label 提供完整文本；prefers-reduced-motion 时跳过 scramble，直接淡入。
-5. **Lenis 全局会不会和现有滚动冲突？** → 只在 `/`(Index) 挂载，路由切换时 destroy；Play 页不受影响。
+（按平台 react-three-fiber 知识卡固定上述版本，兼容 React 18）
 
-## 技术细节（给开发的参考）
-- 安装：`bun add lenis@^1.3.23`
-- WebGL shader：vertex 透传 + fragment 用距离场画发光圆点；连线用单独的 LINES drawArrays。
-- 节点数据：`Float32Array(N*4)` (x, y, vx, vy)，每帧 CPU 更新后 bufferSubData。
-- Scramble 字符集：`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`
-- 文件改动清单：
-  - `src/index.css`：+ `@keyframes shimmer`, `.hero-dark` 作用域变量覆盖
-  - `src/pages/Index.tsx`：重写 announcement bar + hero section（其余 section 原封不动）
-  - 新增 4 个组件/hook 文件
+### 文件变更
+- **新增** `src/components/hero/BrainField.tsx` —— R3F Canvas，包含：
+  - `<Points>` 大脑点云 geometry（程序化生成：用球面 + 噪声压扁出脑半球，左右对称两瓣）；
+  - `useFrame` 中按 `sin(t * 2π * 0.6)` 做整体呼吸缩放 ±3%；
+  - 顶点 shader 加 fbm 漂移 + mouse uniform 做局部突触脉冲；
+  - 自动检测 WebGL 失败 → 回退为现有 `NeuralCanvas`。
+- **修改** `src/components/hero/NeuralCanvas.tsx` —— 减少粒子数、关闭线连、仅作为外围氛围层；新增 mouse parallax。
+- **重写** `src/pages/Index.tsx`：
+  - Hero 段落改为左字 + 右大脑，删除 Featured 卡；
+  - 新增 `<ModulesGrid />` 7 列布局，把当前 featured + secondary 合并为单一数组；
+  - 删除 `<Value />` 区段与底部多段 main；
+  - Hero 高度收缩为 70vh。
+- **新增 i18n key**（`src/lib/i18n.tsx`）：
+  - `hero_h1_a = "Quantify"` / `量化`
+  - `hero_h1_b = "the limits of human cognition."` / `人类认知的边界。`
+  - `lab_tag = "LAB · 02"`
+  - `modules_meta = "EST. 2026"`
+  - 删除/废弃 `cloud_lb / voice / sci` 等 Values 文案的引用（保留 key 以防其他页用到）。
 
-## 不做的事
-- 不换字体（不引入 Space Mono）
-- 不加背景视频
-- 不动 Modules / Values / Footer
-- 不改全站配色
-- 不引入 framer-motion（用现有 CSS 动画 + ref 即可，不增加依赖）
+### 性能保险
+- 大脑点云粒子数：桌面 2500、移动 800；
+- R3F `dpr={[1, 1.5]}`、`frameloop="always"` 但 visibilitychange 暂停；
+- 滚动 30% 后大脑 `opacity → 0.4` 并停止 raf（用 IntersectionObserver），避免下方阅读时持续耗电。
+
+---
+
+## 五、范围以外（不动）
+- 配色 token、字体、shadcn 组件库、路由 — 全部沿用；
+- `/play/*` 内部页面布局不动；
+- AccountMenu / LanguageToggle / ScrambleText 复用。
+
+---
+
+## 六、交付节奏
+一次性交付，无需分阶段。完成后我会用 Playwright 截图首屏，确认"大脑 + 7 卡单屏"实际效果再回报。
+
