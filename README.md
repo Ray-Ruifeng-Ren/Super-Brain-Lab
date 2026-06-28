@@ -1,9 +1,9 @@
-# NeuroPlay
+# Super Brain Lab
 
 > A brain-training arena where focus, mental math and memory are all measurable.
 > 一个把专注、速算、记忆都量化的脑力训练竞技场。
 
-NeuroPlay bundles several cognitive-training games, logs every attempt, and
+Super Brain Lab bundles several cognitive-training games, logs every attempt, and
 ranks players on a cloud leaderboard. Built with React + Vite + TypeScript and
 a Supabase backend.
 

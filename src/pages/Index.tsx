@@ -85,9 +85,9 @@ const Index = () => {
       <header className="absolute left-0 right-0 top-[34px] z-50">
         <div className="container flex items-center justify-between py-4">
           <Link to="/" className="flex items-center gap-2.5 text-background">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground font-display text-sm font-semibold">N</div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground font-display text-sm font-semibold">S</div>
             <div>
-              <div className="text-sm font-semibold leading-none">NeuroPlay</div>
+              <div className="text-sm font-semibold leading-none">Super Brain Lab</div>
               <div className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-background/60">{t.brand_sub}</div>
             </div>
           </Link>

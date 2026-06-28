@@ -68,7 +68,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl">欢迎来到 NeuroPlay</DialogTitle>
+          <DialogTitle className="font-display text-2xl">欢迎来到 Super Brain Lab</DialogTitle>
           <DialogDescription>登录后成绩将同步到云端排行榜。</DialogDescription>
         </DialogHeader>
 
