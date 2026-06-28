@@ -59,9 +59,8 @@ export default function VideoBackdrop() {
         className="absolute inset-0 h-full w-full object-cover"
         style={{ opacity: 0, transition: "opacity 120ms linear" }}
       />
-      {/* Soft wash so foreground text & cards stay legible on light theme */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/40 to-background/85" />
-      <div className="absolute inset-0 bg-background/25" />
+      {/* Very light wash — keep video clearly visible while text stays legible */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-background/50" />
     </div>
   );
 }
