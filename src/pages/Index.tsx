@@ -14,6 +14,25 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Top announcement bar */}
+      <div className="relative overflow-hidden border-b border-border bg-foreground text-background">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.18]"
+          style={{
+            background:
+              "radial-gradient(60% 120% at 20% 50%, hsl(var(--primary)) 0%, transparent 60%), radial-gradient(50% 120% at 85% 50%, hsl(var(--primary)) 0%, transparent 65%)",
+          }}
+        />
+        <div className="container relative flex items-center justify-center gap-3 py-2 text-center text-[11px] tracking-wide md:text-xs">
+          <span className="hidden h-1.5 w-1.5 rounded-full bg-primary md:inline-block animate-pulse" />
+          <span className="font-medium">{t.coauthor}</span>
+          <span className="hidden text-background/50 md:inline">·</span>
+          <span className="hidden font-mono-tabular uppercase tracking-[0.2em] text-background/60 md:inline">
+            {t.coauthor_sub}
+          </span>
+        </div>
+      </div>
+
       <header className="border-b border-border bg-background">
         <div className="container flex items-center justify-between py-4">
           <Link to="/" className="flex items-center gap-2.5">
@@ -32,7 +51,26 @@ const Index = () => {
 
       <main className="container max-w-5xl py-12 md:py-16">
         {/* Hero */}
-        <section className="grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-center">
+        <section className="relative grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-center">
+          {/* Premium backdrop */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-x-8 -top-10 -bottom-10 -z-10"
+            style={{
+              background:
+                "radial-gradient(40% 60% at 15% 20%, hsl(var(--primary) / 0.10) 0%, transparent 70%), radial-gradient(45% 70% at 90% 80%, hsl(var(--primary) / 0.07) 0%, transparent 70%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.035]"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+            }}
+          />
+
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               <Sparkles className="h-3 w-3 text-primary" /> {t.today_pick}
