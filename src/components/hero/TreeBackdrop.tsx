@@ -366,7 +366,7 @@ export default function TreeBackdrop() {
   }, []);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#1a1208]">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#1a1208]">
       <canvas ref={ref} className="absolute inset-0 h-full w-full" />
     </div>
   );
