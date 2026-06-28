@@ -105,57 +105,70 @@ export function ModuleCard({
           }}
         />
 
-        {/* ornate double frame */}
+        {/* ornate triple frame */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-[6px] rounded-[10px]"
-          style={{ border: `1px solid ${p.gild}88` }}
+          className="pointer-events-none absolute inset-[5px] rounded-[10px]"
+          style={{ border: `1px solid ${p.gild}99` }}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-[10px] rounded-[8px]"
+          className="pointer-events-none absolute inset-[9px] rounded-[8px]"
           style={{ border: `0.5px solid ${p.gild}55` }}
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-[13px] rounded-[6px]"
+          style={{ border: `0.5px dashed ${p.gild}44` }}
+        />
 
-        {/* corner flourishes */}
+        {/* corner flourishes — more elaborate */}
         {[
-          { t: 4, l: 4, r: "rotate(0deg)" },
-          { t: 4, l: "auto", r: "rotate(90deg)", right: 4 },
-          { t: "auto", l: 4, r: "rotate(-90deg)", bottom: 4 },
-          { t: "auto", l: "auto", r: "rotate(180deg)", bottom: 4, right: 4 },
+          { pos: { top: 6, left: 6 }, r: "rotate(0deg)" },
+          { pos: { top: 6, right: 6 }, r: "rotate(90deg)" },
+          { pos: { bottom: 6, left: 6 }, r: "rotate(-90deg)" },
+          { pos: { bottom: 6, right: 6 }, r: "rotate(180deg)" },
         ].map((c, i) => (
           <svg
             key={i}
             aria-hidden
-            width="18" height="18" viewBox="0 0 24 24"
+            width="26" height="26" viewBox="0 0 32 32"
             className="pointer-events-none absolute"
-            style={{
-              top: c.t as number | string,
-              left: c.l as number | string,
-              right: (c as { right?: number }).right,
-              bottom: (c as { bottom?: number }).bottom,
-              transform: c.r,
-              color: p.gild,
-            }}
+            style={{ ...c.pos, transform: c.r, color: p.gild }}
           >
-            <path d="M2 2 H10 M2 2 V10 M2 2 Q8 4 10 10" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.85" />
-            <circle cx="10" cy="10" r="0.9" fill="currentColor" opacity="0.7" />
+            <path d="M2 2 H14 M2 2 V14" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.9" />
+            <path d="M2 2 Q10 4 14 14 Q12 10 6 8 Q4 7 3 5" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.75" />
+            <circle cx="14" cy="14" r="1" fill="currentColor" opacity="0.8" />
+            <path d="M5 5 Q7 6 8 8" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.6" />
           </svg>
         ))}
 
-        {/* top bar — Roman numeral index + suit dot */}
-        <div className="relative flex items-center justify-between px-4 pt-4">
+        {/* TOP BAR — Roman numeral + name + seal */}
+        <div className="relative flex items-center gap-2.5 px-5 pt-5">
           <span
-            className="font-display text-[13px] leading-none"
-            style={{ color: p.gild, letterSpacing: "0.12em" }}
+            className="font-display text-[15px] leading-none"
+            style={{ color: p.gild, letterSpacing: "0.14em" }}
           >
             {toRoman(index + 1)}
           </span>
           <span
-            className="flex h-5 w-5 items-center justify-center rounded-full"
+            aria-hidden
+            className="block h-px flex-shrink-0"
+            style={{ width: 10, background: `${p.gild}aa` }}
+          />
+          <h3
+            className="flex-1 truncate font-display text-[14px] leading-none"
+            style={{ color: p.ink, letterSpacing: "0.02em" }}
+            title={name}
+          >
+            {name}
+          </h3>
+          <span
+            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
             style={{
               border: `1px solid ${p.gild}99`,
               background: featured ? p.accent : "transparent",
+              boxShadow: `inset 0 0 4px ${p.bot}`,
             }}
           >
             <span
@@ -165,13 +178,22 @@ export function ModuleCard({
           </span>
         </div>
 
+        {/* ornamental divider under title */}
+        <div className="relative mx-5 mt-2 flex items-center gap-1.5">
+          <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${p.gild}88)` }} />
+          <svg width="10" height="6" viewBox="0 0 10 6" style={{ color: p.gild }}>
+            <path d="M0 3 L4 3 M6 3 L10 3 M5 0 L5 6 M3 1 L5 3 L7 1 M3 5 L5 3 L7 5" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.85" />
+          </svg>
+          <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${p.gild}88, transparent)` }} />
+        </div>
+
         {/* art portrait window */}
-        <div className="relative mx-4 mt-3">
+        <div className="relative mx-5 mt-3">
           <div
             className="relative aspect-square w-full overflow-hidden rounded-[6px]"
             style={{
               background: `radial-gradient(80% 80% at 50% 35%, ${p.accent}33 0%, ${p.bot} 75%)`,
-              boxShadow: `inset 0 0 0 1px ${p.gild}66, inset 0 0 24px ${p.bot}`,
+              boxShadow: `inset 0 0 0 1px ${p.gild}88, inset 0 0 0 2.5px ${p.bot}, inset 0 0 0 3px ${p.gild}55, inset 0 0 30px ${p.bot}`,
             }}
           >
             <div
@@ -187,27 +209,36 @@ export function ModuleCard({
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                background: `radial-gradient(50% 30% at 50% 25%, ${p.accent}44, transparent 70%)`,
+                background: `radial-gradient(50% 30% at 50% 25%, ${p.accent}55, transparent 70%)`,
               }}
             />
+            {/* portrait corner ticks */}
+            {[
+              { top: 3, left: 3, r: 0 },
+              { top: 3, right: 3, r: 90 },
+              { bottom: 3, left: 3, r: -90 },
+              { bottom: 3, right: 3, r: 180 },
+            ].map((c, i) => (
+              <svg key={i} aria-hidden width="8" height="8" viewBox="0 0 8 8" className="absolute" style={{ ...c, transform: `rotate(${c.r}deg)`, color: p.gild }}>
+                <path d="M0 0 H4 M0 0 V4" fill="none" stroke="currentColor" strokeWidth="0.8" />
+              </svg>
+            ))}
           </div>
         </div>
 
-        {/* meta */}
-        <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
-          <div
-            className="mb-2 h-px w-full"
-            style={{ background: `linear-gradient(90deg, transparent, ${p.gild}aa, transparent)` }}
-          />
-          <h3
-            className="font-display text-[18px] leading-tight"
-            style={{ color: p.ink, letterSpacing: "-0.01em" }}
-          >
-            {name}
-          </h3>
+        {/* BOTTOM — tagline + scrollwork */}
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5">
+          <div className="mb-2 flex items-center gap-1.5">
+            <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${p.gild}88)` }} />
+            <svg width="14" height="6" viewBox="0 0 14 6" style={{ color: p.gild }}>
+              <path d="M0 3 Q3 0 7 3 Q11 6 14 3" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.85" />
+              <circle cx="7" cy="3" r="0.8" fill="currentColor" opacity="0.9" />
+            </svg>
+            <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${p.gild}88, transparent)` }} />
+          </div>
           <p
-            className="mt-1 font-mono-tabular text-[9px] uppercase"
-            style={{ color: `${p.gild}`, letterSpacing: "0.22em", opacity: 0.85 }}
+            className="text-center font-mono-tabular text-[9px] uppercase"
+            style={{ color: p.gild, letterSpacing: "0.28em", opacity: 0.9 }}
           >
             {tagline}
           </p>
@@ -223,6 +254,7 @@ export function ModuleCard({
             mixBlendMode: "screen",
           }}
         />
+
       </div>
     </Link>
   );
