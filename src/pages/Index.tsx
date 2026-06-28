@@ -12,7 +12,7 @@ const Index = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* Cinematic looping video + cursor sparkles */}
-      <VideoBackdrop />
+      <TreeBackdrop />
       <SparkleCursor />
 
       {/* Nav */}
