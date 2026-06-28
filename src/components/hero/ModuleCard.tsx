@@ -149,22 +149,58 @@ export function ModuleCard({
         />
 
 
-        {/* ornate triple frame */}
+        {/* ornate triple frame — gilded with wear */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-[5px] rounded-[10px]"
-          style={{ border: `1px solid ${p.gild}99` }}
+          style={{
+            border: `1.2px solid ${p.gild}`,
+            boxShadow: `inset 0 0 0 0.5px ${p.accent}66, 0 0 0 0.5px rgba(0,0,0,0.4)`,
+          }}
+        />
+        {/* gilt specular highlight — diagonal gleam on frame */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-[5px] rounded-[10px]"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(255,230,160,0.55) 0%, transparent 18%, transparent 60%, rgba(255,220,150,0.35) 78%, transparent 95%)",
+            mixBlendMode: "screen",
+            padding: "1.2px",
+            WebkitMask:
+              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}
+        />
+        {/* gilt wear — dark chips eaten out of the frame */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-[5px] rounded-[10px]"
+          style={{
+            background:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.4 -0.4'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+            backgroundSize: "100% 100%",
+            opacity: 0.5,
+            mixBlendMode: "multiply",
+            padding: "1.2px",
+            WebkitMask:
+              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-[9px] rounded-[8px]"
-          style={{ border: `0.5px solid ${p.gild}55` }}
+          style={{ border: `0.5px solid ${p.gild}66` }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-[13px] rounded-[6px]"
           style={{ border: `0.5px dashed ${p.gild}44` }}
         />
+
 
         {/* corner flourishes — more elaborate */}
         {[
