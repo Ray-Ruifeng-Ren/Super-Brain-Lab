@@ -64,6 +64,10 @@ const Index = () => {
             <em className="italic text-muted-foreground">{t.hero_headline}</em>
           </h1>
 
+          <p className="animate-fade-rise-d2 mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+            {t.hero_sub}
+          </p>
+
           <Link
             to="/play/flashmath"
             className="animate-fade-rise-d2 group mt-7 inline-flex items-center gap-2 rounded-full bg-foreground px-9 py-3 text-sm font-medium text-background transition-transform duration-300 hover:scale-[1.03]"
