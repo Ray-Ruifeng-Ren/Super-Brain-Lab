@@ -9,6 +9,7 @@ import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
 import { Mic, MicOff, Play, RotateCcw, Settings2, Check, X, Minus, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { logAttempt, fetchWrongAttempts } from "@/lib/practiceLog";
+import { recordMistakeAttempt, masteredSet, problemKey as mkKey, MASTERY_THRESHOLD } from "@/lib/mistakeMastery";
 
 type Phase = "config" | "ready" | "playing" | "answer" | "result";
 
@@ -192,6 +193,7 @@ export function FlashMathGame({
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
   const usedMistakeKeysRef = useRef<Set<string>>(new Set());
+  const clearedThisSessionRef = useRef<{ key: string; expr: string }[]>([]);
 
   useEffect(() => onCfgChange?.(cfg), [cfg, onCfgChange]);
 
@@ -209,12 +211,15 @@ export function FlashMathGame({
     if (mistakeMode) {
       const wrong = await fetchWrongAttempts("flashmath", 1000);
       if (wrong.length === 0) return null;
-      // dedupe by problem identity
+      const mastered = masteredSet("flashmath");
+      // dedupe by problem identity, drop already-mastered ones
       const uniq = new Map<string, typeof wrong[number]>();
       for (const w of wrong) {
         const k = problemKey(w.terms, w.signs, w.answer);
+        if (mastered.has(k)) continue;
         if (!uniq.has(k)) uniq.set(k, w);
       }
+      if (uniq.size === 0) return null;
       const pool = Array.from(uniq.entries());
       // prefer not-yet-used in this session
       let candidates = pool.filter(([k]) => !usedMistakeKeysRef.current.has(k));
@@ -247,6 +252,17 @@ export function FlashMathGame({
       correct,
       usedMs,
     });
+
+    if (mistakeMode) {
+      const k = mkKey(problem.signs, problem.terms, problem.answer);
+      const { justMastered } = recordMistakeAttempt("flashmath", k, correct);
+      if (justMastered) {
+        const expr = problem.terms
+          .map((t, i) => (i === 0 ? (problem.signs[i] === "-" ? `−${t}` : `${t}`) : problem.signs[i] === "-" ? ` − ${t}` : ` + ${t}`))
+          .join("") + ` = ${problem.answer}`;
+        clearedThisSessionRef.current.push({ key: k, expr });
+      }
+    }
 
     if (correct) {
       const r = await submitScore({
@@ -284,6 +300,16 @@ export function FlashMathGame({
     }
     setResult({ correct, score, answered: value });
     setPhase("result");
+    // Session ended: notify about any mastered-and-cleared problems
+    const cleared = clearedThisSessionRef.current;
+    if (cleared.length > 0) {
+      toast({
+        title: "🎉 恭喜！错题已过关",
+        description: `${cleared.length} 道题已连续答对 ${MASTERY_THRESHOLD} 次，从错题本中移除：\n` +
+          cleared.map((c) => `· ${c.expr}`).join("\n"),
+      });
+      clearedThisSessionRef.current = [];
+    }
   };
 
   const speech = useSpeech((txt) => {
@@ -305,6 +331,7 @@ export function FlashMathGame({
 
   const beginCountdown = async () => {
     usedMistakeKeysRef.current.clear();
+    clearedThisSessionRef.current = [];
     const p = await loadProblem();
     if (!p) {
       toast({ title: "没有错题可以练", description: "请关闭「只练错题」开关。" });
