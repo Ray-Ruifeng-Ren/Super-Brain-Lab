@@ -300,6 +300,16 @@ export function FlashMathGame({
     }
     setResult({ correct, score, answered: value });
     setPhase("result");
+    // Session ended: notify about any mastered-and-cleared problems
+    const cleared = clearedThisSessionRef.current;
+    if (cleared.length > 0) {
+      toast({
+        title: "🎉 恭喜！错题已过关",
+        description: `${cleared.length} 道题已连续答对 ${MASTERY_THRESHOLD} 次，从错题本中移除：\n` +
+          cleared.map((c) => `· ${c.expr}`).join("\n"),
+      });
+      clearedThisSessionRef.current = [];
+    }
   };
 
   const speech = useSpeech((txt) => {
