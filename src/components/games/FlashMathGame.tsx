@@ -331,6 +331,7 @@ export function FlashMathGame({
 
   const beginCountdown = async () => {
     usedMistakeKeysRef.current.clear();
+    clearedThisSessionRef.current = [];
     const p = await loadProblem();
     if (!p) {
       toast({ title: "没有错题可以练", description: "请关闭「只练错题」开关。" });
