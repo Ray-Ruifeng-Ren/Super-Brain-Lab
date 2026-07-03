@@ -7,6 +7,7 @@ import {
   type AttemptRow,
 } from "@/lib/practiceLog";
 import { AbacusDetail } from "./AbacusDetail";
+import { masteredSet } from "@/lib/mistakeMastery";
 
 interface Props {
   game: string;
