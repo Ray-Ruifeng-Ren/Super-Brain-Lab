@@ -9,6 +9,7 @@ import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
 import { Mic, MicOff, Play, RotateCcw, Settings2, Check, X, Minus, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { logAttempt, fetchWrongAttempts } from "@/lib/practiceLog";
+import { recordMistakeAttempt, masteredSet, problemKey as mkKey, MASTERY_THRESHOLD } from "@/lib/mistakeMastery";
 
 type Phase = "config" | "ready" | "playing" | "answer" | "result";
 
