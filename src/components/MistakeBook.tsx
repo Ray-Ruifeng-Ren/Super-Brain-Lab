@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  fetchAttempts,
   fetchWrongAttempts,
   formatExpr,
   type AttemptRow,
 } from "@/lib/practiceLog";
 import { AbacusDetail } from "./AbacusDetail";
-import { masteredSet } from "@/lib/mistakeMastery";
+import { backfillMastery, masteredSet } from "@/lib/mistakeMastery";
 
 interface Props {
   game: string;
