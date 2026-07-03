@@ -211,12 +211,15 @@ export function FlashMathGame({
     if (mistakeMode) {
       const wrong = await fetchWrongAttempts("flashmath", 1000);
       if (wrong.length === 0) return null;
-      // dedupe by problem identity
+      const mastered = masteredSet("flashmath");
+      // dedupe by problem identity, drop already-mastered ones
       const uniq = new Map<string, typeof wrong[number]>();
       for (const w of wrong) {
         const k = problemKey(w.terms, w.signs, w.answer);
+        if (mastered.has(k)) continue;
         if (!uniq.has(k)) uniq.set(k, w);
       }
+      if (uniq.size === 0) return null;
       const pool = Array.from(uniq.entries());
       // prefer not-yet-used in this session
       let candidates = pool.filter(([k]) => !usedMistakeKeysRef.current.has(k));
