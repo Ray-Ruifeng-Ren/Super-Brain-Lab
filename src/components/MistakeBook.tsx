@@ -19,10 +19,12 @@ interface Props {
 const PAGE_SIZE = 15;
 
 export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange }: Props) {
-  const [wrong, setWrong] = useState<AttemptRow[]>([]);
+  const [unsolved, setUnsolved] = useState<AttemptRow[]>([]);
+  const [solved, setSolved] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [tab, setTab] = useState<"unsolved" | "solved">("unsolved");
 
   useEffect(() => {
     let live = true;
@@ -30,17 +32,18 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
     fetchWrongAttempts(game, 1000).then((w) => {
       if (!live) return;
       const mastered = masteredSet(game);
-      // dedupe: keep most recent attempt per unique problem, drop mastered ones
       const seen = new Set<string>();
-      const uniq: AttemptRow[] = [];
+      const u: AttemptRow[] = [];
+      const s: AttemptRow[] = [];
       for (const r of w) {
         const k = `${(r.signs ?? []).join("")}|${(r.terms ?? []).join(",")}|${r.answer}`;
-        if (mastered.has(k)) continue;
         if (seen.has(k)) continue;
         seen.add(k);
-        uniq.push(r);
+        if (mastered.has(k)) s.push(r);
+        else u.push(r);
       }
-      setWrong(uniq);
+      setUnsolved(u);
+      setSolved(s);
       setLoading(false);
     });
     return () => {
@@ -48,6 +51,12 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
     };
   }, [game, refreshKey]);
 
+  useEffect(() => {
+    setPage(0);
+    setSelectedIdx(null);
+  }, [tab]);
+
+  const wrong = tab === "unsolved" ? unsolved : solved;
   const totalPages = Math.max(1, Math.ceil(wrong.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pageStart = safePage * PAGE_SIZE;
