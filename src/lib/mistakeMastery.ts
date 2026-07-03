@@ -69,4 +69,48 @@ export function masteredSet(game: string): Set<string> {
   return out;
 }
 
+/**
+ * Backfill mastery from full attempt history:
+ * for every problem that has ever been wrong, count trailing consecutive
+ * correct attempts (most recent first). If ≥ THRESHOLD, mark mastered.
+ * Returns the number of newly-mastered problems.
+ */
+export function backfillMastery(
+  game: string,
+  attemptsDesc: { signs: string[]; terms: number[]; answer: number; correct: boolean }[],
+): number {
+  const store = readStore(game);
+  // group attempts by problem key, preserving desc order
+  const byKey = new Map<string, boolean[]>();
+  for (const a of attemptsDesc) {
+    const k = problemKey(a.signs as string[], a.terms, a.answer);
+    let arr = byKey.get(k);
+    if (!arr) {
+      arr = [];
+      byKey.set(k, arr);
+    }
+    arr.push(a.correct);
+  }
+  let added = 0;
+  for (const [k, arr] of byKey) {
+    const hasWrong = arr.some((c) => !c);
+    if (!hasWrong) continue; // never wrong → not a mistake, skip
+    // count trailing consecutive correct (from most recent going back)
+    let streak = 0;
+    for (const c of arr) {
+      if (c) streak += 1;
+      else break;
+    }
+    const cur = store[k] ?? { streak: 0, mastered: false };
+    if (streak > cur.streak) cur.streak = streak;
+    if (streak >= THRESHOLD && !cur.mastered) {
+      cur.mastered = true;
+      added += 1;
+    }
+    store[k] = cur;
+  }
+  writeStore(game, store);
+  return added;
+}
+
 export const MASTERY_THRESHOLD = THRESHOLD;

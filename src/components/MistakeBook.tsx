@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  fetchAttempts,
   fetchWrongAttempts,
   formatExpr,
   type AttemptRow,
 } from "@/lib/practiceLog";
 import { AbacusDetail } from "./AbacusDetail";
-import { masteredSet } from "@/lib/mistakeMastery";
+import { backfillMastery, masteredSet } from "@/lib/mistakeMastery";
 
 interface Props {
   game: string;
@@ -29,7 +30,12 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
   useEffect(() => {
     let live = true;
     setLoading(true);
-    fetchWrongAttempts(game, 1000).then((w) => {
+    (async () => {
+      // Run history backfill so historical 5-in-a-row streaks auto-solve.
+      const allAttempts = await fetchAttempts(game);
+      if (!live) return;
+      backfillMastery(game, allAttempts);
+      const w = await fetchWrongAttempts(game, 1000);
       if (!live) return;
       const mastered = masteredSet(game);
       const seen = new Set<string>();
@@ -45,7 +51,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
       setUnsolved(u);
       setSolved(s);
       setLoading(false);
-    });
+    })();
     return () => {
       live = false;
     };
