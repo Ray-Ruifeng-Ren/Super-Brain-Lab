@@ -19,10 +19,12 @@ interface Props {
 const PAGE_SIZE = 15;
 
 export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange }: Props) {
-  const [wrong, setWrong] = useState<AttemptRow[]>([]);
+  const [unsolved, setUnsolved] = useState<AttemptRow[]>([]);
+  const [solved, setSolved] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [tab, setTab] = useState<"unsolved" | "solved">("unsolved");
 
   useEffect(() => {
     let live = true;
@@ -30,17 +32,18 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
     fetchWrongAttempts(game, 1000).then((w) => {
       if (!live) return;
       const mastered = masteredSet(game);
-      // dedupe: keep most recent attempt per unique problem, drop mastered ones
       const seen = new Set<string>();
-      const uniq: AttemptRow[] = [];
+      const u: AttemptRow[] = [];
+      const s: AttemptRow[] = [];
       for (const r of w) {
         const k = `${(r.signs ?? []).join("")}|${(r.terms ?? []).join(",")}|${r.answer}`;
-        if (mastered.has(k)) continue;
         if (seen.has(k)) continue;
         seen.add(k);
-        uniq.push(r);
+        if (mastered.has(k)) s.push(r);
+        else u.push(r);
       }
-      setWrong(uniq);
+      setUnsolved(u);
+      setSolved(s);
       setLoading(false);
     });
     return () => {
@@ -48,6 +51,12 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
     };
   }, [game, refreshKey]);
 
+  useEffect(() => {
+    setPage(0);
+    setSelectedIdx(null);
+  }, [tab]);
+
+  const wrong = tab === "unsolved" ? unsolved : solved;
   const totalPages = Math.max(1, Math.ceil(wrong.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pageStart = safePage * PAGE_SIZE;
@@ -64,17 +73,41 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3 w-3 text-muted-foreground" />
             <span className="text-xs font-medium">只练错题</span>
-            {wrong.length > 0 && (
+            {unsolved.length > 0 && (
               <span className="rounded bg-destructive/10 px-1 font-mono-tabular text-[10px] text-destructive">
-                {wrong.length}
+                {unsolved.length}
               </span>
             )}
           </div>
           <Switch
             checked={mistakeMode}
             onCheckedChange={onMistakeModeChange}
-            disabled={wrong.length === 0}
+            disabled={unsolved.length === 0}
           />
+        </div>
+        <div className="mb-2 flex gap-1 rounded-md bg-muted/40 p-0.5">
+          <button
+            type="button"
+            onClick={() => setTab("unsolved")}
+            className={`flex-1 rounded px-2 py-1 text-[11px] transition-colors ${
+              tab === "unsolved"
+                ? "bg-background font-medium text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            未解决 <span className="font-mono-tabular">{unsolved.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("solved")}
+            className={`flex-1 rounded px-2 py-1 text-[11px] transition-colors ${
+              tab === "solved"
+                ? "bg-background font-medium text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            已解决 <span className="font-mono-tabular">{solved.length}</span>
+          </button>
         </div>
         {loading ? (
           <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
@@ -82,7 +115,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
           </div>
         ) : wrong.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
-            还没有错题，继续保持 👍
+            {tab === "unsolved" ? "还没有错题，继续保持 👍" : "还没有已解决的错题"}
           </div>
         ) : (
           <>
@@ -96,8 +129,8 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                       onClick={() => setSelectedIdx(idx)}
                       className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-2 py-1 text-left transition-colors hover:border-primary/40 hover:bg-muted/40"
                     >
-                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono-tabular text-[10px] text-muted-foreground">
-                        #{idx + 1}
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 font-mono-tabular text-[10px] ${tab === "solved" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                        {tab === "solved" ? "✓" : `#${idx + 1}`}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-mono-tabular text-[11px]">
