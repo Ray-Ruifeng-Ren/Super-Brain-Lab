@@ -193,6 +193,7 @@ export function FlashMathGame({
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
   const usedMistakeKeysRef = useRef<Set<string>>(new Set());
+  const clearedThisSessionRef = useRef<{ key: string; expr: string }[]>([]);
 
   useEffect(() => onCfgChange?.(cfg), [cfg, onCfgChange]);
 
