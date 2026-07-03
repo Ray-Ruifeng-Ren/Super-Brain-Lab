@@ -253,6 +253,17 @@ export function FlashMathGame({
       usedMs,
     });
 
+    if (mistakeMode) {
+      const k = mkKey(problem.signs, problem.terms, problem.answer);
+      const { justMastered } = recordMistakeAttempt("flashmath", k, correct);
+      if (justMastered) {
+        const expr = problem.terms
+          .map((t, i) => (i === 0 ? (problem.signs[i] === "-" ? `−${t}` : `${t}`) : problem.signs[i] === "-" ? ` − ${t}` : ` + ${t}`))
+          .join("") + ` = ${problem.answer}`;
+        clearedThisSessionRef.current.push({ key: k, expr });
+      }
+    }
+
     if (correct) {
       const r = await submitScore({
         game: "flashmath",
