@@ -4,7 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type GameId = "flashmath" | "schulte" | "reaction" | "nback" | "cards" | "orbit" | "gauntlet";
+export type GameId = "flashmath" | "abacus" | "schulte" | "reaction" | "nback" | "cards" | "orbit" | "gauntlet";
 export type ScoreDirection = "lower" | "higher";
 export type Period = "weekly" | "all";
 
@@ -42,6 +42,16 @@ export const GAMES: Record<
     formatValue: (v) => `${Math.round(v)}`,
     valueLabel: "得分",
     initial: "F",
+  },
+  abacus: {
+    id: "abacus",
+    name: "珠心算",
+    tagline: "Abacus Mental Math",
+    description: "闪算 / 看算 / 听算三大模式，专业珠心算出题规则。",
+    direction: "higher",
+    formatValue: (v) => `${Math.round(v)}`,
+    valueLabel: "得分",
+    initial: "A",
   },
   schulte: {
     id: "schulte",

@@ -5,6 +5,8 @@ import { GAMES, type GameId } from "@/lib/leaderboard";
 import { SchulteGame } from "@/components/games/SchulteGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
 import { FlashMathGame, type FlashCfg } from "@/components/games/FlashMathGame";
+import { AbacusGame } from "@/components/games/AbacusGame";
+import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg } from "@/lib/abacus";
 import { NBackGame } from "@/components/games/NBackGame";
 import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { OrbitFocusGame } from "@/components/games/OrbitFocusGame";
@@ -26,6 +28,8 @@ const Play = () => {
   const [schulteSize, setSchulteSize] = useState(4);
   const [flashCfg, setFlashCfg] = useState<FlashCfg>({ count: 5, digits: 2, speedMs: 700, includeSub: false, rounds: 1 });
   const [flashMistakeMode, setFlashMistakeMode] = useState(false);
+  const [abacusCfg, setAbacusCfg] = useState<AbacusCfg>(DEFAULT_ABACUS_CFG);
+  const [abacusMistakeMode, setAbacusMistakeMode] = useState(false);
   const [nbackCfg, setNbackCfg] = useState({ n: 2, trials: 20, intervalMs: 2000 });
   const [orbitMode, setOrbitMode] = useState<string>("overall");
   const [gauntletCfg, setGauntletCfg] = useState<GauntletConfig>(DEFAULT_GAUNTLET);
@@ -48,6 +52,7 @@ const Play = () => {
   const mode =
     game.id === "schulte" ? `${schulteSize}x${schulteSize}` :
     game.id === "flashmath" ? `${flashCfg.count}q-${flashCfg.digits}d${flashCfg.includeSub ? "-sub" : ""}` :
+    game.id === "abacus" ? abacusMode(abacusCfg) :
     game.id === "nback" ? `${nbackCfg.n}-back-${nbackCfg.trials}` :
     game.id === "cards" ? "deck52" :
     game.id === "orbit" ? orbitMode :
@@ -77,6 +82,12 @@ const Play = () => {
         {game.id === "flashmath" && (
           <div className="mb-2">
             <PracticeStats game="flashmath" refreshKey={refreshKey} />
+          </div>
+        )}
+
+        {game.id === "abacus" && (
+          <div className="mb-2">
+            <PracticeStats game="abacus" refreshKey={refreshKey} />
           </div>
         )}
 
@@ -110,6 +121,14 @@ const Play = () => {
                 onCfgChange={setFlashCfg}
                 mistakeMode={flashMistakeMode}
                 onMistakeModeChange={setFlashMistakeMode}
+              />
+            )}
+            {game.id === "abacus" && (
+              <AbacusGame
+                onFinished={handleFinished}
+                onCfgChange={setAbacusCfg}
+                mistakeMode={abacusMistakeMode}
+                onMistakeModeChange={setAbacusMistakeMode}
               />
             )}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
@@ -189,6 +208,22 @@ const Play = () => {
                       refreshKey={refreshKey}
                       mistakeMode={flashMistakeMode}
                       onMistakeModeChange={setFlashMistakeMode}
+                    />
+                  }
+                />
+              </div>
+            ) : game.id === "abacus" ? (
+              <div className="h-full min-h-[520px]">
+                <PracticeLog
+                  game="abacus"
+                  refreshKey={refreshKey}
+                  extraTab={<ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />}
+                  mistakeTab={
+                    <MistakeBook
+                      game="abacus"
+                      refreshKey={refreshKey}
+                      mistakeMode={abacusMistakeMode}
+                      onMistakeModeChange={setAbacusMistakeMode}
                     />
                   }
                 />

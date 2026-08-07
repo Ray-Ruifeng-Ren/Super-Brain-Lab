@@ -40,6 +40,7 @@ const DICT = {
     arena: "广场",
     games: {
       flashmath: { name: "闪电心算", desc: "数字逐笔闪现，心算累加。支持语音作答。" },
+      abacus: { name: "珠心算", desc: "闪算 / 看算 / 听算三大模式，专业珠心算出题规则。" },
       schulte: { name: "舒尔特方格", desc: "依序点击 1→N 数字，专注力经典训练。" },
       reaction: { name: "反应速度", desc: "屏幕变绿瞬间立刻点击，毫秒级反应测试。" },
       nback: { name: "N-Back", desc: "工作记忆的国际黄金标准训练。" },
@@ -85,6 +86,7 @@ const DICT = {
     arena: "Arena",
     games: {
       flashmath: { name: "Flash Math", desc: "Digits flash one by one; add them up mentally. Voice answer supported." },
+      abacus: { name: "Abacus Math", desc: "Flash / Glance / Listen modes with pro abacus problem rules." },
       schulte: { name: "Schulte Table", desc: "Tap 1→N in order — the classic attention drill." },
       reaction: { name: "Reaction Time", desc: "Click the instant the screen turns green — millisecond test." },
       nback: { name: "N-Back", desc: "The international gold standard for working memory." },
