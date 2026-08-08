@@ -59,8 +59,13 @@ const Play = () => {
     game.id === "gauntlet" ? (gauntletView === "overall" ? "overall" : encodeMode(gauntletCfg)) :
     "default";
 
+  const isAbacus = game.id === "abacus";
+
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background"
+      style={isAbacus ? { background: "linear-gradient(180deg, #FFFDF7 0%, #FDF0D6 100%)" } : undefined}
+    >
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
         <div className="container flex items-center justify-between py-3">
           <button
@@ -112,7 +117,7 @@ const Play = () => {
         )}
 
         <div className="grid gap-3 lg:grid-cols-[1fr_560px]">
-          <div className="flex flex-col rounded-md border border-border bg-card p-3 md:p-4">
+          <div className={cn("flex flex-col", isAbacus ? "" : "rounded-md border border-border bg-card p-3 md:p-4")}>
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
             {game.id === "flashmath" && (
