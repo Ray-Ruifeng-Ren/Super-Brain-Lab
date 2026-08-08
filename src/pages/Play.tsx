@@ -332,10 +332,11 @@ function AbacusScene() {
       {bgOk && (
         <>
           <img
-            src="/abacus-bg.jpg"
+            src="/abacus-bg.png"
             alt=""
             onError={() => setBgOk(false)}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+            // 放大并锚定右下,把源图左上角的游戏 logo 裁到画面外
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.16)", transformOrigin: "bottom right" }}
           />
           {/* 可读性蒙版:底部渐强,保证卡片文字清晰 */}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,251,242,.30) 42%, rgba(255,248,236,.62) 100%)" }} />
