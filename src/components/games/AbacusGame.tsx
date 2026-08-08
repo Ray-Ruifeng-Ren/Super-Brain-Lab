@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, RotateCcw, Settings2, Check, X, Minus, AlertTriangle, Volume2 } from "lucide-react";
+import { Play, RotateCcw, Settings2, Check, X, Minus, Plus, AlertTriangle, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -356,7 +356,9 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
           <div className="flex h-[320px] items-center justify-center rounded-md bg-foreground text-background">
             {showTerm && (
               <div key={stepIdx} className="animate-pop-in flex items-center gap-2">
-                {displayIdx > 0 && sign === "-" && <Minus className="h-12 w-12" strokeWidth={3} />}
+                {sign === "-"
+                  ? <Minus className="h-12 w-12" strokeWidth={3} />
+                  : <Plus className="h-12 w-12" strokeWidth={3} />}
                 <span className="text-8xl font-semibold font-mono-tabular">{v}</span>
               </div>
             )}
@@ -380,7 +382,7 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
             <div className="flex flex-col items-end gap-0.5 font-mono-tabular text-2xl font-semibold md:text-3xl">
               {problem.terms.map((t, i) => (
                 <div key={i}>
-                  {i > 0 && <span className={cn("mr-3", problem.signs[i] === "-" ? "text-destructive" : "text-muted-foreground")}>{problem.signs[i] === "-" ? "−" : "+"}</span>}
+                  <span className={cn("mr-3", problem.signs[i] === "-" ? "text-destructive" : "text-muted-foreground")}>{problem.signs[i] === "-" ? "−" : "+"}</span>
                   {t}
                 </div>
               ))}
