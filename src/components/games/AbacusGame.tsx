@@ -568,14 +568,43 @@ function AddsubParams({ cfg, set, mistakeMode, onMistakeModeChange }: {
 
 // ---------- 作答面板 ----------
 function AnswerPad({ value, onChange, onSubmit, onGiveUp, canReplay, onReplay }: {
-  value: string; onChange: (v: string) => void; onSubmit: () => void; onGiveUp: () => void; canReplay?: boolean; onReplay?: () => void;
+  value: string; onChange: (v: string | ((prev: string) => string)) => void; onSubmit: () => void; onGiveUp: () => void; canReplay?: boolean; onReplay?: () => void;
 }) {
+  const append = (d: string) => onChange((prev) => (prev + d).slice(0, 12));
+  const back = () => onChange((prev) => prev.slice(0, -1));
+  const clear = () => onChange("");
+  // 物理键盘同样可用
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") append(e.key);
+      else if (e.key === "Backspace") back();
+      else if (e.key === "Enter") onSubmit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSubmit]); // eslint-disable-line
+
+  const key = (label: string, onClick: () => void, tone?: "muted"): CSSProperties => ({
+    height: 52, borderRadius: 14, fontSize: 24, fontWeight: 800, cursor: "pointer",
+    border: `2px solid ${T.line}`, background: tone === "muted" ? "#FBF3E3" : "#fff",
+    color: tone === "muted" ? T.inkSoft : T.ink, boxShadow: "0 3px 0 #EADBBD",
+    fontFamily: "var(--font-num, inherit)",
+  });
+
   return (
     <div className="flex flex-col gap-3">
-      <input autoFocus inputMode="numeric" value={value} placeholder="在这里填答案,回车提交～"
-        onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
-        className="font-mono-tabular"
-        style={{ height: 60, textAlign: "center", fontSize: 28, fontWeight: 800, color: T.ink, background: "#fff", border: `3px solid ${T.sun}`, borderRadius: 18, outline: "none" }} />
+      {/* 答案显示 */}
+      <div className="font-mono-tabular" style={{ minHeight: 62, borderRadius: 16, border: `3px solid ${T.sun}`, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, fontWeight: 900, color: value ? T.ink : "#D9C7A6" }}>
+        {value || "?"}
+      </div>
+      {/* 数字键盘 */}
+      <div className="grid grid-cols-5 gap-2">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].map((d) => (
+          <button key={d} style={key(d, () => append(d))} onClick={() => append(d)}>{d}</button>
+        ))}
+        <button style={{ ...key("清除", clear, "muted"), gridColumn: "span 2" }} onClick={clear}>清除</button>
+        <button style={{ ...key("退格", back, "muted"), gridColumn: "span 3" }} onClick={back}>⌫ 退格</button>
+      </div>
       <div className="flex items-center gap-2.5">
         <button onClick={onSubmit} disabled={!value.trim()} style={{ ...candyBtn(T.coral, T.coralD), flex: 1, padding: "14px", fontSize: 17, opacity: value.trim() ? 1 : 0.5 }}>提交 ✓</button>
         {canReplay && (
