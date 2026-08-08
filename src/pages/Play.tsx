@@ -63,10 +63,11 @@ const Play = () => {
 
   return (
     <div
-      className="min-h-screen bg-background"
-      style={isAbacus ? { background: "linear-gradient(180deg, #FFFDF7 0%, #FDF0D6 100%)" } : undefined}
+      className={cn("min-h-screen", isAbacus ? "relative overflow-hidden" : "bg-background")}
+      style={isAbacus ? { background: "linear-gradient(180deg, #BDE8FF 0%, #DDF3FF 34%, #FBF1D8 70%, #FFF6E6 100%)" } : undefined}
     >
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+      {isAbacus && <AbacusScene />}
+      <header className={cn("sticky top-0 z-30 border-b", isAbacus ? "border-transparent bg-white/40 backdrop-blur" : "border-border bg-background/90 backdrop-blur")}>
         <div className="container flex items-center justify-between py-3">
           <button
             onClick={() => navigate("/")}
@@ -83,7 +84,7 @@ const Play = () => {
         </div>
       </header>
 
-      <main className="container py-2 md:py-3">
+      <main className={cn("container py-2 md:py-3", isAbacus && "relative z-10")}>
         {game.id === "flashmath" && (
           <div className="mb-2">
             <PracticeStats game="flashmath" refreshKey={refreshKey} />
@@ -242,5 +243,34 @@ const Play = () => {
     </div>
   );
 };
+
+// 珠心算专属:童话风背景场景(原创,借鉴洛克王国明亮奇幻画风)
+function AbacusScene() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+      {/* 太阳光晕 */}
+      <div style={{ position: "absolute", top: -80, right: -40, width: 260, height: 260, borderRadius: 999, background: "radial-gradient(circle, #FFE7A340 0%, transparent 70%)" }} />
+      {/* 云朵 */}
+      <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} preserveAspectRatio="none" viewBox="0 0 1440 900">
+        <g fill="#FFFFFF" opacity="0.85">
+          <ellipse cx="180" cy="120" rx="70" ry="34" />
+          <ellipse cx="240" cy="110" rx="52" ry="30" />
+          <ellipse cx="120" cy="132" rx="46" ry="26" />
+          <ellipse cx="1180" cy="90" rx="64" ry="30" />
+          <ellipse cx="1240" cy="100" rx="48" ry="26" />
+          <ellipse cx="1120" cy="104" rx="40" ry="22" />
+          <ellipse cx="720" cy="70" rx="54" ry="24" opacity="0.7" />
+        </g>
+        {/* 远山/草坡 */}
+        <path d="M0 820 Q 360 700 720 810 T 1440 780 V900 H0 Z" fill="#BEE79B" opacity="0.75" />
+        <path d="M0 860 Q 400 770 820 850 T 1440 840 V900 H0 Z" fill="#8FD06A" opacity="0.9" />
+      </svg>
+      {/* 闪烁星点 */}
+      {[[320, 210], [1080, 240], [560, 150], [960, 300], [200, 320], [1280, 360]].map(([x, y], i) => (
+        <span key={i} className="animate-pulse" style={{ position: "absolute", left: x, top: y, fontSize: 16, opacity: 0.8, animationDelay: `${i * 0.4}s` }}>✨</span>
+      ))}
+    </div>
+  );
+}
 
 export default Play;

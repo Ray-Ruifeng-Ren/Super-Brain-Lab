@@ -27,7 +27,8 @@ const STAGE = "#233251";
 const candyBtn = (bg: string, bgD: string): CSSProperties => ({
   background: `linear-gradient(180deg, ${bg}, ${bgD})`,
   color: "#fff", border: "none", borderRadius: 999,
-  boxShadow: `0 5px 0 ${bgD}, 0 10px 18px ${bgD}44`,
+  boxShadow: `0 5px 0 ${bgD}, 0 10px 18px ${bgD}44, inset 0 2px 0 rgba(255,255,255,.45)`,
+  textShadow: "0 1px 1px rgba(0,0,0,.15)",
   fontWeight: 800, cursor: "pointer",
 });
 
@@ -237,6 +238,7 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
   if (phase === "config") {
     return (
       <div style={shell}>
+        <Bunting />
         {/* 头部:吉祥物 + 标题 */}
         <div className="flex items-center justify-between gap-2" style={{ marginBottom: 14 }}>
           <div className="flex items-center gap-2.5">
@@ -523,6 +525,21 @@ function AnswerPad({ value, onChange, onSubmit, onGiveUp, canReplay, onReplay }:
         )}
       </div>
       <button onClick={onGiveUp} style={{ textAlign: "center", fontSize: 12, color: T.inkSoft, fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>放弃本局</button>
+    </div>
+  );
+}
+
+// ---------- 装饰:三角彩旗 ----------
+function Bunting() {
+  const colors = [T.coral, T.sun, T.grass, T.sky, T.grape];
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 7, marginBottom: 12, borderTop: `2px dashed ${T.line}`, paddingTop: 8 }}>
+      {Array.from({ length: 13 }).map((_, i) => (
+        <span key={i} style={{
+          width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
+          borderTop: `15px solid ${colors[i % colors.length]}`, filter: "drop-shadow(0 2px 1px rgba(0,0,0,.10))",
+        }} />
+      ))}
     </div>
   );
 }
