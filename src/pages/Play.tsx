@@ -30,6 +30,7 @@ const Play = () => {
   const [flashMistakeMode, setFlashMistakeMode] = useState(false);
   const [abacusCfg, setAbacusCfg] = useState<AbacusCfg>(DEFAULT_ABACUS_CFG);
   const [abacusMistakeMode, setAbacusMistakeMode] = useState(false);
+  const [abacusView, setAbacusView] = useState<"home" | "train">("home");
   const [nbackCfg, setNbackCfg] = useState({ n: 2, trials: 20, intervalMs: 2000 });
   const [orbitMode, setOrbitMode] = useState<string>("overall");
   const [gauntletCfg, setGauntletCfg] = useState<GauntletConfig>(DEFAULT_GAUNTLET);
@@ -66,7 +67,7 @@ const Play = () => {
       className={cn("min-h-screen", isAbacus ? "relative overflow-hidden" : "bg-background")}
       style={isAbacus ? { background: "linear-gradient(180deg, #BDE8FF 0%, #DDF3FF 34%, #FBF1D8 70%, #FFF6E6 100%)" } : undefined}
     >
-      {isAbacus && <AbacusScene />}
+      {isAbacus && <AbacusScene view={abacusView} />}
       <header className={cn("sticky top-0 z-30 border-b", isAbacus ? "border-transparent bg-white/40 backdrop-blur" : "border-border bg-background/90 backdrop-blur")}>
         <div className="container flex items-center justify-between py-3">
           <button
@@ -91,7 +92,7 @@ const Play = () => {
           </div>
         )}
 
-        {game.id === "abacus" && (
+        {game.id === "abacus" && abacusView === "train" && (
           <div className="mb-2">
             <PracticeStats game="abacus" refreshKey={refreshKey} />
           </div>
@@ -117,7 +118,7 @@ const Play = () => {
           </div>
         )}
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_560px]">
+        <div className={cn("grid gap-3", isAbacus && abacusView === "home" ? "" : "lg:grid-cols-[1fr_560px]")}>
           <div className={cn("flex flex-col", isAbacus ? "" : "rounded-md border border-border bg-card p-3 md:p-4")}>
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
@@ -133,6 +134,7 @@ const Play = () => {
               <AbacusGame
                 onFinished={handleFinished}
                 onCfgChange={setAbacusCfg}
+                onViewChange={setAbacusView}
                 mistakeMode={abacusMistakeMode}
                 onMistakeModeChange={setAbacusMistakeMode}
               />
@@ -142,6 +144,7 @@ const Play = () => {
             {game.id === "orbit" && <OrbitFocusGame onFinished={handleFinished} />}
             {game.id === "gauntlet" && <GauntletFlashGame onFinished={handleFinished} onCfgChange={setGauntletCfg} />}
           </div>
+          {!(isAbacus && abacusView === "home") && (
           <aside className="space-y-3 lg:flex lg:flex-col">
             {game.id === "orbit" && (
               <div className="flex flex-wrap items-center gap-1">
@@ -238,6 +241,7 @@ const Play = () => {
               <ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />
             )}
           </aside>
+          )}
         </div>
       </main>
     </div>
@@ -265,9 +269,10 @@ function Tower({ x, w, h, roof }: { x: number; w: number; h: number; roof: strin
     </g>
   );
 }
-function AbacusScene() {
-  // 优先使用已授权的图片背景(放在 public/abacus-bg.jpg);缺失或加载失败则回退到原创 SVG 场景。
+function AbacusScene({ view }: { view: "home" | "train" }) {
+  // 首页用主视觉大图(home-bg.png);训练页用清淡草原(abacus-bg.png)。缺失则回退原创 SVG 场景。
   const [bgOk, setBgOk] = useState(true);
+  const bgSrc = view === "home" ? "/home-bg.png" : "/abacus-bg.png";
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
       {/* 原创场景(回退底) */}
@@ -332,14 +337,16 @@ function AbacusScene() {
       {bgOk && (
         <>
           <img
-            src="/abacus-bg.png"
+            key={bgSrc}
+            src={bgSrc}
             alt=""
             onError={() => setBgOk(false)}
-            // 放大并锚定右下,把源图左上角的游戏 logo 裁到画面外
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.16)", transformOrigin: "bottom right" }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
           />
-          {/* 可读性蒙版:底部渐强,保证卡片文字清晰 */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,251,242,.30) 42%, rgba(255,248,236,.62) 100%)" }} />
+          {/* 可读性蒙版:训练页更强(护住卡片文字),首页较淡(露出主视觉) */}
+          <div style={{ position: "absolute", inset: 0, background: view === "home"
+            ? "linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,251,242,.12) 60%, rgba(255,248,236,.30) 100%)"
+            : "linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,251,242,.55) 45%, rgba(255,248,236,.78) 100%)" }} />
         </>
       )}
       {/* 闪烁星点 */}

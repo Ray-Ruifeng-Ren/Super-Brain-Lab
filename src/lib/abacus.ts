@@ -12,8 +12,11 @@ import type { Problem, Sign } from "./flashMath";
 
 export type AbacusMode = "flash" | "glance" | "listen";
 export type AddSubType = "add" | "sub" | "mix"; // 纯加 / 纯减 / 加减混合
+export type Project = "addsub" | "multiply" | "divide" | "bead";
 
 export interface AbacusCfg {
+  project: Project;
+  // 加减法
   mode: AbacusMode;
   count: number; // 笔数
   minDigits: number; // 最小位数
@@ -22,9 +25,19 @@ export interface AbacusCfg {
   flashBatch: number; // 显示笔数(一次闪示多笔)
   listenLevel: number; // 听算语速 1=常规 2=较快 3=极快
   addsub: AddSubType;
+  // 乘法
+  aDigits: number;
+  bDigits: number;
+  // 除法
+  divisorDigits: number;
+  quotientDigits: number;
+  // 看珠
+  beadDigits: number;
+  beadSpeedMs: number;
 }
 
 export const DEFAULT_ABACUS_CFG: AbacusCfg = {
+  project: "addsub",
   mode: "flash",
   count: 5,
   minDigits: 2,
@@ -33,7 +46,20 @@ export const DEFAULT_ABACUS_CFG: AbacusCfg = {
   flashBatch: 1,
   listenLevel: 1,
   addsub: "mix",
+  aDigits: 2,
+  bDigits: 2,
+  divisorDigits: 1,
+  quotientDigits: 2,
+  beadDigits: 1,
+  beadSpeedMs: 2000,
 };
+
+export const PROJECTS: { id: Project; label: string; emoji: string; desc: string }[] = [
+  { id: "addsub", label: "加减法", emoji: "➕", desc: "闪算 / 看算 / 听算" },
+  { id: "multiply", label: "乘法", emoji: "✖️", desc: "自选位数乘算" },
+  { id: "divide", label: "除法", emoji: "➗", desc: "自选位数除算" },
+  { id: "bead", label: "看珠", emoji: "🧮", desc: "数珠互译" },
+];
 
 // ---- 基础工具 ----
 const randInt = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
@@ -191,18 +217,105 @@ export function buildAbacusProblem(cfg: AbacusCfg): Problem {
   return buildAbacusProblem({ ...cfg, addsub: "add" });
 }
 
+// ============ 乘法 ============
+// 规则:乘数与被乘数合计数字不重复(位数和≤10);位数大时各自内部不重复。
+export function generateMultiply(aDigits: number, bDigits: number): { a: number; b: number; answer: number } {
+  const unique = aDigits + bDigits <= 10;
+  const fixLead = (arr: number[]) => {
+    if (arr[0] === 0) {
+      const j = arr.findIndex((x) => x !== 0);
+      if (j > 0) [arr[0], arr[j]] = [arr[j], arr[0]];
+      else return false;
+    }
+    return true;
+  };
+  for (let k = 0; k < 200; k++) {
+    if (unique) {
+      const digs = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).slice(0, aDigits + bDigits);
+      const aArr = digs.slice(0, aDigits), bArr = digs.slice(aDigits);
+      if (!fixLead(aArr) || !fixLead(bArr)) continue;
+      const a = Number(aArr.join("")), b = Number(bArr.join(""));
+      return { a, b, answer: a * b };
+    }
+    const a = genUniqueDigitNumber(aDigits), b = genUniqueDigitNumber(bDigits);
+    return { a, b, answer: a * b };
+  }
+  const a = genUniqueDigitNumber(aDigits), b = genUniqueDigitNumber(bDigits);
+  return { a, b, answer: a * b };
+}
+
+// ============ 除法 ============
+// 规则:整除;除数与商数字不重复(位数和≤10)。指定除数位数 + 商位数,被除数自动推导。
+export function generateDivide(divisorDigits: number, quotientDigits: number): { dividend: number; divisor: number; quotient: number } {
+  const unique = divisorDigits + quotientDigits <= 10;
+  for (let k = 0; k < 200; k++) {
+    const divisor = genUniqueDigitNumber(divisorDigits);
+    if (divisor === 0) continue;
+    const forbidden = unique ? new Set(digitsOf(divisor)) : new Set<number>();
+    const quotient = genUniqueDigitNumber(quotientDigits, forbidden);
+    return { dividend: divisor * quotient, divisor, quotient };
+  }
+  const divisor = genUniqueDigitNumber(divisorDigits) || 2;
+  const quotient = genUniqueDigitNumber(quotientDigits);
+  return { dividend: divisor * quotient, divisor, quotient };
+}
+
+// ============ 看珠 ============
+export function generateBead(digits: number): { value: number } {
+  return { value: digits <= 1 ? randInt(0, 9) : genUniqueDigitNumber(digits) };
+}
+
+// ============ 统一回合模型 ============
+export interface Round {
+  project: Project;
+  answer: number;
+  exprStr: string; // 结果展示 / 记录用(不含答案)
+  terms?: number[];
+  signs?: Sign[];
+  a?: number;
+  b?: number;
+  op?: "×" | "÷";
+  beadValue?: number;
+  beadDigits?: number;
+}
+
+function addsubExpr(terms: number[], signs: Sign[]): string {
+  return terms.map((t, i) => (i === 0 ? `${t}` : signs[i] === "-" ? ` − ${t}` : ` + ${t}`)).join("");
+}
+
+/** 依配置生成一个回合(任意项目)。 */
+export function buildRound(cfg: AbacusCfg): Round {
+  if (cfg.project === "multiply") {
+    const { a, b, answer } = generateMultiply(cfg.aDigits, cfg.bDigits);
+    return { project: "multiply", answer, a, b, op: "×", exprStr: `${a} × ${b}` };
+  }
+  if (cfg.project === "divide") {
+    const { dividend, divisor, quotient } = generateDivide(cfg.divisorDigits, cfg.quotientDigits);
+    return { project: "divide", answer: quotient, a: dividend, b: divisor, op: "÷", exprStr: `${dividend} ÷ ${divisor}` };
+  }
+  if (cfg.project === "bead") {
+    const { value } = generateBead(cfg.beadDigits);
+    return { project: "bead", answer: value, beadValue: value, beadDigits: cfg.beadDigits, exprStr: `算盘 = ${value}` };
+  }
+  const p = buildAbacusProblem(cfg);
+  return { project: "addsub", answer: p.answer, terms: p.terms, signs: p.signs, exprStr: addsubExpr(p.terms, p.signs) };
+}
+
 // ---- 计分 ----
 const DIGIT_WEIGHT = [0, 1, 1.4, 2, 2.8, 3.8, 5, 6.5, 8, 10];
 // 模式系数:看算最易 ×1,闪算 ×1.15,听算最难 ×1.3
 const MODE_FACTOR: Record<AbacusMode, number> = { glance: 1, flash: 1.15, listen: 1.3 };
 
 export function previewScore(cfg: AbacusCfg): number {
+  const wOf = (d: number) => DIGIT_WEIGHT[d] ?? d;
+  if (cfg.project === "multiply") return Math.round((wOf(cfg.aDigits) + wOf(cfg.bDigits)) * 12);
+  if (cfg.project === "divide") return Math.round((wOf(cfg.divisorDigits) + wOf(cfg.quotientDigits)) * 12);
+  if (cfg.project === "bead") return Math.round(wOf(cfg.beadDigits) * (2200 / Math.max(cfg.beadSpeedMs, 300)) * 12);
   const avgDigits = Math.round((cfg.minDigits + cfg.maxDigits) / 2);
-  const w = DIGIT_WEIGHT[avgDigits] ?? avgDigits;
+  const w = wOf(avgDigits);
   const speed =
     cfg.mode === "flash" ? Math.min(8, Math.max(0.4, 1000 / Math.max(cfg.speedMs, 100))) : 1;
   const sub = cfg.addsub === "add" ? 1 : 1.3;
-  // 一次闪多笔更难,略给系数
   const batch = cfg.mode === "flash" && cfg.flashBatch > 1 ? 1 + (cfg.flashBatch - 1) * 0.15 : 1;
   return Math.round(cfg.count * w * speed * sub * MODE_FACTOR[cfg.mode] * batch * 10);
 }
@@ -211,8 +324,11 @@ export function computeScore(cfg: AbacusCfg, correct: boolean): number {
   return correct ? previewScore(cfg) : 0;
 }
 
-/** leaderboard 的 mode 字符串:同一模式+配置的人互相比。 */
+/** leaderboard 的 mode 字符串:同一项目+配置的人互相比。 */
 export function abacusMode(cfg: AbacusCfg): string {
+  if (cfg.project === "multiply") return `mul-${cfg.aDigits}x${cfg.bDigits}`;
+  if (cfg.project === "divide") return `div-${cfg.divisorDigits}_${cfg.quotientDigits}`;
+  if (cfg.project === "bead") return `bead-${cfg.beadDigits}d`;
   const dig = cfg.minDigits === cfg.maxDigits ? `${cfg.minDigits}d` : `${cfg.minDigits}_${cfg.maxDigits}d`;
   const b = cfg.mode === "flash" && cfg.flashBatch > 1 ? `-b${cfg.flashBatch}` : "";
   return `${cfg.mode}-${cfg.count}q-${dig}-${cfg.addsub}${b}`;
