@@ -244,30 +244,106 @@ const Play = () => {
   );
 };
 
-// 珠心算专属:童话风背景场景(原创,借鉴洛克王国明亮奇幻画风)
-function AbacusScene() {
+// 珠心算专属:童话世界背景(原创绘制,借鉴洛克王国的构图与配色,未使用其素材)
+function Cloud({ x, y, s, o = 0.95 }: { x: number; y: number; s: number; o?: number }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
-      {/* 太阳光晕 */}
-      <div style={{ position: "absolute", top: -80, right: -40, width: 260, height: 260, borderRadius: 999, background: "radial-gradient(circle, #FFE7A340 0%, transparent 70%)" }} />
-      {/* 云朵 */}
-      <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} preserveAspectRatio="none" viewBox="0 0 1440 900">
-        <g fill="#FFFFFF" opacity="0.85">
-          <ellipse cx="180" cy="120" rx="70" ry="34" />
-          <ellipse cx="240" cy="110" rx="52" ry="30" />
-          <ellipse cx="120" cy="132" rx="46" ry="26" />
-          <ellipse cx="1180" cy="90" rx="64" ry="30" />
-          <ellipse cx="1240" cy="100" rx="48" ry="26" />
-          <ellipse cx="1120" cy="104" rx="40" ry="22" />
-          <ellipse cx="720" cy="70" rx="54" ry="24" opacity="0.7" />
+    <g transform={`translate(${x} ${y}) scale(${s})`} opacity={o}>
+      <ellipse cx="0" cy="10" rx="60" ry="26" fill="#EAF6FF" />
+      <ellipse cx="0" cy="0" rx="46" ry="30" fill="#fff" />
+      <ellipse cx="42" cy="8" rx="38" ry="24" fill="#fff" />
+      <ellipse cx="-40" cy="10" rx="34" ry="22" fill="#fff" />
+      <ellipse cx="20" cy="-14" rx="30" ry="22" fill="#fff" />
+    </g>
+  );
+}
+function Tower({ x, w, h, roof }: { x: number; w: number; h: number; roof: string }) {
+  return (
+    <g>
+      <rect x={x} y={430 - h} width={w} height={h} rx="4" fill="#FBF6EC" />
+      <polygon points={`${x - 4},${430 - h} ${x + w + 4},${430 - h} ${x + w / 2},${430 - h - w * 1.1}`} fill={roof} />
+      <rect x={x + w / 2 - 4} y={430 - h + 14} width="8" height="14" rx="3" fill="#BFD8F0" />
+    </g>
+  );
+}
+function AbacusScene() {
+  // 优先使用已授权的图片背景(放在 public/abacus-bg.jpg);缺失或加载失败则回退到原创 SVG 场景。
+  const [bgOk, setBgOk] = useState(true);
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+      {/* 原创场景(回退底) */}
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 1440 810" preserveAspectRatio="xMidYMid slice">
+        {/* 天空 */}
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#8FD1FF" />
+            <stop offset="0.5" stopColor="#C4E9FF" />
+            <stop offset="0.8" stopColor="#EAF6FF" />
+            <stop offset="1" stopColor="#FBF3DF" />
+          </linearGradient>
+          <linearGradient id="hillA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#A6E07E" /><stop offset="1" stopColor="#8AD062" /></linearGradient>
+          <linearGradient id="hillB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7FC85A" /><stop offset="1" stopColor="#63B441" /></linearGradient>
+        </defs>
+        <rect width="1440" height="810" fill="url(#sky)" />
+        {/* 太阳光晕 */}
+        <circle cx="1180" cy="120" r="180" fill="#FFF3C9" opacity="0.5" />
+        <circle cx="1180" cy="120" r="70" fill="#FFF6DA" opacity="0.9" />
+        {/* 彩虹 */}
+        <g fill="none" strokeWidth="7" opacity="0.5">
+          {["#FF8FA3", "#FFC46B", "#FFE873", "#9BE38B", "#7FD1FF", "#C6A6FF"].map((c, i) => (
+            <path key={i} d={`M ${120 + i * 8} 300 A ${300 - i * 8} ${300 - i * 8} 0 0 1 ${720 - i * 8} 300`} stroke={c} />
+          ))}
         </g>
-        {/* 远山/草坡 */}
-        <path d="M0 820 Q 360 700 720 810 T 1440 780 V900 H0 Z" fill="#BEE79B" opacity="0.75" />
-        <path d="M0 860 Q 400 770 820 850 T 1440 840 V900 H0 Z" fill="#8FD06A" opacity="0.9" />
+        {/* 远处城堡剪影(浅色,不抢内容) */}
+        <g opacity="0.55">
+          <Tower x={690} w={40} h={150} roof="#E8654E" />
+          <Tower x={760} w={54} h={200} roof="#E8654E" />
+          <Tower x={834} w={40} h={150} roof="#E8654E" />
+          <rect x={686} y={330} width="196" height="100" fill="#FBF6EC" />
+          <rect x={720} y={370} width="26" height="60" rx="12" fill="#CFE4F6" />
+          <rect x={824} y={370} width="26" height="60" rx="12" fill="#CFE4F6" />
+        </g>
+        {/* 云朵 */}
+        <Cloud x={230} y={130} s={1.1} />
+        <Cloud x={520} y={90} s={0.8} o={0.85} />
+        <Cloud x={1040} y={150} s={1.0} />
+        <Cloud x={1300} y={90} s={0.7} o={0.8} />
+        {/* 金色大树(左) */}
+        <g>
+          <path d="M150 470 C 140 400 150 360 165 330 C 150 300 175 285 185 300 C 205 275 235 290 225 315 C 250 320 245 355 225 360 C 235 400 220 450 210 470 Z" fill="#F6C445" />
+          <circle cx="150" cy="360" r="46" fill="#FFD75E" />
+          <circle cx="215" cy="345" r="52" fill="#FBCB47" />
+          <circle cx="185" cy="315" r="44" fill="#FFDE77" />
+          <rect x="176" y="450" width="16" height="60" rx="6" fill="#E9E2D2" />
+        </g>
+        {/* 层叠草坡 */}
+        <path d="M0 560 Q 360 500 760 560 T 1440 540 V810 H0 Z" fill="url(#hillA)" opacity="0.9" />
+        <path d="M0 640 Q 420 580 900 650 T 1440 630 V810 H0 Z" fill="url(#hillB)" />
+        {/* 小花 */}
+        {[[120, 690], [300, 720], [520, 700], [760, 730], [1000, 705], [1240, 725], [1360, 700]].map(([x, y], i) => (
+          <g key={i} transform={`translate(${x} ${y})`}>
+            {[0, 72, 144, 216, 288].map((a) => (
+              <circle key={a} cx={Math.cos(a * Math.PI / 180) * 7} cy={Math.sin(a * Math.PI / 180) * 7} r="5" fill={i % 2 ? "#FF9FB2" : "#FFFFFF"} />
+            ))}
+            <circle r="4" fill="#FFD75E" />
+          </g>
+        ))}
       </svg>
+      {/* 已授权图片背景(存在时覆盖在原创场景之上) */}
+      {bgOk && (
+        <>
+          <img
+            src="/abacus-bg.jpg"
+            alt=""
+            onError={() => setBgOk(false)}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {/* 可读性蒙版:底部渐强,保证卡片文字清晰 */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,251,242,.30) 42%, rgba(255,248,236,.62) 100%)" }} />
+        </>
+      )}
       {/* 闪烁星点 */}
-      {[[320, 210], [1080, 240], [560, 150], [960, 300], [200, 320], [1280, 360]].map(([x, y], i) => (
-        <span key={i} className="animate-pulse" style={{ position: "absolute", left: x, top: y, fontSize: 16, opacity: 0.8, animationDelay: `${i * 0.4}s` }}>✨</span>
+      {[["22%", "26%"], ["70%", "20%"], ["40%", "16%"], ["86%", "34%"], ["12%", "40%"]].map(([x, y], i) => (
+        <span key={i} className="animate-pulse" style={{ position: "absolute", left: x, top: y, fontSize: 15, opacity: 0.85, animationDelay: `${i * 0.5}s` }}>✨</span>
       ))}
     </div>
   );
