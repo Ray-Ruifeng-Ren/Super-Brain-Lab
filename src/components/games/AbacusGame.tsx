@@ -11,20 +11,22 @@ import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
 import type { Problem } from "@/lib/flashMath";
 import {
   buildAbacusProblem, previewScore, computeScore, abacusMode, numberToCN,
-  DEFAULT_ABACUS_CFG, type AbacusCfg, type AbacusMode,
+  DEFAULT_ABACUS_CFG, type AbacusCfg, type AbacusMode, type AddSubType,
 } from "@/lib/abacus";
 
 type Phase = "config" | "ready" | "playing" | "answer" | "result";
 
 const CFG_KEY = "abacus:lastCfg";
 const COUNT_PRESETS = [5, 10, 15, 20, 30];
-const DIGIT_PRESETS = [1, 2, 3, 4, 5];
 const SPEED_PRESETS = [
   { label: "0.1秒", value: 100 }, { label: "0.3秒", value: 300 },
   { label: "0.5秒", value: 500 }, { label: "1秒", value: 1000 }, { label: "1.5秒", value: 1500 },
 ];
 const LISTEN_PRESETS = [
-  { label: "慢", value: 3 }, { label: "中", value: 5 }, { label: "快", value: 7 }, { label: "极快", value: 9 },
+  { label: "常规语速", value: 1 }, { label: "较快语速", value: 2 }, { label: "极快语速", value: 3 },
+];
+const ADDSUB_OPTIONS: { id: AddSubType; label: string }[] = [
+  { id: "add", label: "纯加" }, { id: "sub", label: "纯减" }, { id: "mix", label: "加减混合" },
 ];
 const MODES: { id: AbacusMode; label: string; sub: string }[] = [
   { id: "flash", label: "闪算", sub: "逐笔闪现" },
@@ -34,13 +36,19 @@ const MODES: { id: AbacusMode; label: string; sub: string }[] = [
 
 function clampCfg(c: Partial<AbacusCfg>): AbacusCfg {
   const m = c.mode === "glance" || c.mode === "listen" ? c.mode : "flash";
+  const addsub: AddSubType = c.addsub === "add" || c.addsub === "sub" ? c.addsub : "mix";
+  const minD = Math.min(9, Math.max(1, Math.round(c.minDigits ?? DEFAULT_ABACUS_CFG.minDigits)));
+  const maxD = Math.min(9, Math.max(minD, Math.round(c.maxDigits ?? DEFAULT_ABACUS_CFG.maxDigits)));
+  const count = Math.min(200, Math.max(1, Math.round(c.count ?? DEFAULT_ABACUS_CFG.count)));
   return {
     mode: m,
-    count: Math.min(200, Math.max(1, Math.round(c.count ?? DEFAULT_ABACUS_CFG.count))),
-    digits: Math.min(9, Math.max(1, Math.round(c.digits ?? DEFAULT_ABACUS_CFG.digits))),
+    count,
+    minDigits: minD,
+    maxDigits: maxD,
     speedMs: Math.min(5000, Math.max(100, Math.round(c.speedMs ?? DEFAULT_ABACUS_CFG.speedMs))),
-    listenLevel: Math.min(10, Math.max(1, Math.round(c.listenLevel ?? DEFAULT_ABACUS_CFG.listenLevel))),
-    includeSub: !!c.includeSub,
+    flashBatch: Math.min(count, Math.max(1, Math.round(c.flashBatch ?? DEFAULT_ABACUS_CFG.flashBatch))),
+    listenLevel: Math.min(3, Math.max(1, Math.round(c.listenLevel ?? DEFAULT_ABACUS_CFG.listenLevel))),
+    addsub,
   };
 }
 
@@ -57,7 +65,7 @@ function speakTerm(text: string, level: number): Promise<void> {
     if (!("speechSynthesis" in window)) return resolve();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "zh-CN";
-    u.rate = 0.7 + level * 0.12;
+    u.rate = level >= 3 ? 1.7 : level === 2 ? 1.35 : 1.0; // 常规/较快/极快
     u.onend = () => resolve();
     u.onerror = () => resolve();
     window.speechSynthesis.speak(u);
@@ -141,17 +149,19 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [phase, countdown, cfg.mode]);
 
-  // 闪算揭示
+  // 闪算揭示(stepIdx 为「组」下标,一组一次闪示 flashBatch 笔)
+  const flashBatch = Math.max(1, cfg.flashBatch);
+  const flashSteps = problem ? Math.ceil(problem.terms.length / flashBatch) : 0;
   useEffect(() => {
     if (phase !== "playing" || cfg.mode !== "flash" || !problem) return;
-    if (stepIdx >= problem.terms.length) { setPhase("answer"); return; }
+    if (stepIdx >= flashSteps) { setPhase("answer"); return; }
     setShowTerm(true);
     const blankMs = Math.min(120, Math.max(50, cfg.speedMs * 0.15));
     const showMs = Math.max(100, cfg.speedMs - blankMs);
     const t1 = setTimeout(() => setShowTerm(false), showMs);
     const t2 = setTimeout(() => setStepIdx((i) => i + 1), cfg.speedMs);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [phase, stepIdx, problem, cfg.mode, cfg.speedMs]);
+  }, [phase, stepIdx, problem, cfg.mode, cfg.speedMs, flashSteps]);
 
   // 听算揭示
   useEffect(() => {
@@ -164,7 +174,7 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
     setShowTerm(true);
     speakTerm(text, cfg.listenLevel).then(() => {
       if (cancelled) return;
-      const gap = Math.max(150, 900 - cfg.listenLevel * 70);
+      const gap = cfg.listenLevel >= 3 ? 200 : cfg.listenLevel === 2 ? 450 : 800;
       timerRef.current = setTimeout(() => setStepIdx((i) => i + 1), gap);
     });
     return () => { cancelled = true; window.speechSynthesis?.cancel(); };
@@ -250,6 +260,22 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
         </ConfigItem>
 
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {/* 位数:最小 / 最大 范围 */}
+          <ConfigItem label="位数" hint="1–9,可范围">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-6 text-[10px] text-muted-foreground">最小</span>
+                <MiniStepper value={cfg.minDigits} min={1} max={9} suffix="位"
+                  onChange={(v) => setCfg({ ...cfg, minDigits: v, maxDigits: Math.max(v, cfg.maxDigits) })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-6 text-[10px] text-muted-foreground">最大</span>
+                <MiniStepper value={cfg.maxDigits} min={1} max={9} suffix="位"
+                  onChange={(v) => setCfg({ ...cfg, maxDigits: v, minDigits: Math.min(v, cfg.minDigits) })} />
+              </div>
+            </div>
+          </ConfigItem>
+
           {/* 笔数 */}
           <ConfigItem label="笔数" hint="1–200">
             <div className="flex flex-wrap items-center gap-1">
@@ -261,18 +287,16 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
             </div>
           </ConfigItem>
 
-          {/* 位数 */}
-          <ConfigItem label="位数" hint="1–9">
+          {/* 加减类型 */}
+          <ConfigItem label="加减类型" hint="减号规则内建">
             <div className="flex flex-wrap items-center gap-1">
-              {DIGIT_PRESETS.map((n) => (
-                <PillBtn key={n} active={cfg.digits === n} onClick={() => setCfg({ ...cfg, digits: n })}>{n}位</PillBtn>
+              {ADDSUB_OPTIONS.map((o) => (
+                <PillBtn key={o.id} active={cfg.addsub === o.id} onClick={() => setCfg({ ...cfg, addsub: o.id })}>{o.label}</PillBtn>
               ))}
-              <span className="text-[10px] text-muted-foreground">或</span>
-              <NumInput value={DIGIT_PRESETS.includes(cfg.digits) ? null : cfg.digits} min={1} max={9} suffix="位" onCommit={(v) => setCfg({ ...cfg, digits: v })} />
             </div>
           </ConfigItem>
 
-          {/* 速度 / 语速 */}
+          {/* 速度 / 语速 / 看算说明 */}
           {cfg.mode === "flash" && (
             <ConfigItem label="单笔时间" hint="越小越快">
               <div className="flex flex-wrap items-center gap-1">
@@ -297,13 +321,15 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
             </ConfigItem>
           )}
 
-          {/* 加减 */}
-          <ConfigItem label="加减" hint="减号规则内建">
-            <div className="flex flex-wrap items-center gap-1">
-              <PillBtn active={!cfg.includeSub} onClick={() => setCfg({ ...cfg, includeSub: false })}>纯加</PillBtn>
-              <PillBtn active={cfg.includeSub} onClick={() => setCfg({ ...cfg, includeSub: true })}>加减混合</PillBtn>
-            </div>
-          </ConfigItem>
+          {/* 显示笔数(闪算一次闪多笔) */}
+          {cfg.mode === "flash" && (
+            <ConfigItem label="显示笔数" hint="可一次闪多笔">
+              <div className="flex items-center gap-2">
+                <MiniStepper value={cfg.flashBatch} min={1} max={Math.max(1, Math.min(10, cfg.count))} suffix="笔"
+                  onChange={(v) => setCfg({ ...cfg, flashBatch: v })} />
+              </div>
+            </ConfigItem>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -338,35 +364,50 @@ export function AbacusGame({ onFinished, onCfgChange, mistakeMode = false, onMis
 
   // ================= PLAYING (flash / listen) =================
   if (phase === "playing" && problem) {
-    const displayIdx = Math.min(stepIdx, problem.terms.length - 1);
-    const sign = problem.signs[displayIdx];
-    const v = problem.terms[displayIdx];
+    const len = problem.terms.length;
+    const isFlash = cfg.mode === "flash";
+    // 闪算:stepIdx=组下标;听算:stepIdx=笔下标
+    const shownCount = isFlash ? Math.min((stepIdx + 1) * flashBatch, len) : Math.min(stepIdx + 1, len);
+    const totalSteps = isFlash ? flashSteps : len;
+    const curStep = Math.min(stepIdx + 1, totalSteps);
+    const batchStart = stepIdx * flashBatch;
+    const batchTerms = isFlash ? problem.terms.slice(batchStart, batchStart + flashBatch) : [];
+    // 单笔大字号,多笔缩小
+    const numCls = flashBatch <= 1 ? "text-8xl" : flashBatch === 2 ? "text-7xl" : "text-5xl";
+    const iconCls = flashBatch <= 1 ? "h-12 w-12" : flashBatch === 2 ? "h-10 w-10" : "h-7 w-7";
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span className="font-mono-tabular">{displayIdx + 1} / {problem.terms.length}</span>
-          <span className="font-mono-tabular">{cfg.mode === "flash" ? `${cfg.speedMs}ms` : "听算"}</span>
+          <span className="font-mono-tabular">{shownCount} / {len}</span>
+          <span className="font-mono-tabular">{isFlash ? `${cfg.speedMs}ms${flashBatch > 1 ? ` ×${flashBatch}` : ""}` : "听算"}</span>
           <button onClick={reset} className="transition-colors hover:text-destructive">放弃</button>
         </div>
         <div className="h-px w-full bg-border">
-          <div className="h-px bg-primary transition-all" style={{ width: `${((displayIdx + 1) / problem.terms.length) * 100}%` }} />
+          <div className="h-px bg-primary transition-all" style={{ width: `${(curStep / totalSteps) * 100}%` }} />
         </div>
 
-        {cfg.mode === "flash" ? (
+        {isFlash ? (
           <div className="flex h-[320px] items-center justify-center rounded-md bg-foreground text-background">
             {showTerm && (
-              <div key={stepIdx} className="animate-pop-in flex items-center gap-2">
-                {sign === "-"
-                  ? <Minus className="h-12 w-12" strokeWidth={3} />
-                  : <Plus className="h-12 w-12" strokeWidth={3} />}
-                <span className="text-8xl font-semibold font-mono-tabular">{v}</span>
+              <div key={stepIdx} className="animate-pop-in flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4">
+                {batchTerms.map((val, k) => {
+                  const gi = batchStart + k;
+                  return (
+                    <div key={gi} className="flex items-center gap-1.5">
+                      {problem.signs[gi] === "-"
+                        ? <Minus className={iconCls} strokeWidth={3} />
+                        : <Plus className={iconCls} strokeWidth={3} />}
+                      <span className={cn(numCls, "font-semibold font-mono-tabular")}>{val}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         ) : (
           <div className="flex h-[320px] flex-col items-center justify-center rounded-md bg-foreground text-background">
             <Volume2 className={cn("h-20 w-20", showTerm && "animate-pulse")} />
-            <p className="mt-6 text-sm text-background/70">正在报第 {displayIdx + 1} / {problem.terms.length} 笔，用心算</p>
+            <p className="mt-6 text-sm text-background/70">正在报第 {shownCount} / {len} 笔，用心算</p>
           </div>
         )}
       </div>
@@ -495,6 +536,20 @@ function PillBtn({ active, onClick, children }: { active: boolean; onClick: () =
     >
       {children}
     </button>
+  );
+}
+
+function MiniStepper({ value, min, max, suffix, onChange }: {
+  value: number; min: number; max: number; suffix?: string; onChange: (v: number) => void;
+}) {
+  const btn = "inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-sm font-semibold text-primary transition-colors hover:border-primary disabled:opacity-40";
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <button className={btn} onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min}>−</button>
+      <span className="num w-6 text-center text-sm font-semibold">{value}</span>
+      <button className={btn} onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}>+</button>
+      {suffix && <span className="text-[10px] text-muted-foreground">{suffix}</span>}
+    </div>
   );
 }
 

@@ -11,23 +11,28 @@
 import type { Problem, Sign } from "./flashMath";
 
 export type AbacusMode = "flash" | "glance" | "listen";
+export type AddSubType = "add" | "sub" | "mix"; // 纯加 / 纯减 / 加减混合
 
 export interface AbacusCfg {
   mode: AbacusMode;
   count: number; // 笔数
-  digits: number; // 位数
+  minDigits: number; // 最小位数
+  maxDigits: number; // 最大位数
   speedMs: number; // 闪算单笔时间
-  listenLevel: number; // 听算语速 1~10
-  includeSub: boolean; // false=纯加, true=加减混合
+  flashBatch: number; // 显示笔数(一次闪示多笔)
+  listenLevel: number; // 听算语速 1=常规 2=较快 3=极快
+  addsub: AddSubType;
 }
 
 export const DEFAULT_ABACUS_CFG: AbacusCfg = {
   mode: "flash",
   count: 5,
-  digits: 2,
+  minDigits: 2,
+  maxDigits: 3,
   speedMs: 700,
-  listenLevel: 6,
-  includeSub: true,
+  flashBatch: 1,
+  listenLevel: 1,
+  addsub: "mix",
 };
 
 // ---- 基础工具 ----
@@ -82,10 +87,15 @@ function genSubtrahend(d: number, maxValue: number, forbidden: Set<number>): num
   return null;
 }
 
-// 减号排布:首笔恒加;加减混合时每隔 2~4 笔一个减号,减号不相邻。
-function planSigns(count: number, includeSub: boolean): Sign[] {
+// 减号排布:首笔恒加。
+//   add → 全加;sub(纯减)→ 首笔加、其余全减;mix → 每隔 2~4 笔一个减号,减号不相邻。
+function planSigns(count: number, addsub: AddSubType): Sign[] {
   const plan: Sign[] = Array(count).fill("+");
-  if (!includeSub) return plan;
+  if (addsub === "add") return plan;
+  if (addsub === "sub") {
+    for (let i = 1; i < count; i++) plan[i] = "-";
+    return plan;
+  }
   let i = randInt(2, 3);
   while (i < count) {
     plan[i] = "-";
@@ -95,10 +105,11 @@ function planSigns(count: number, includeSub: boolean): Sign[] {
 }
 
 // 校验一道加减题是否满足全部规则。
-export function validateProblem(p: Problem, digits: number, includeSub: boolean): string[] {
+export function validateProblem(p: Problem, cfg: Pick<AbacusCfg, "minDigits" | "maxDigits" | "addsub">): string[] {
   const errs: string[] = [];
-  const relaxInternal = digits >= 9;
-  const strictAdjacent = digits * 2 <= 10;
+  const hi = Math.max(cfg.minDigits, cfg.maxDigits);
+  const relaxInternal = hi >= 9;
+  const strictAdjacent = hi * 2 <= 10;
   const { terms, signs } = p;
 
   if (signs[0] !== "+") errs.push("首笔非加");
@@ -111,7 +122,8 @@ export function validateProblem(p: Problem, digits: number, includeSub: boolean)
     }
   });
 
-  if (includeSub) {
+  // 减号不相邻(纯减模式本身连续为减,豁免)
+  if (cfg.addsub !== "sub") {
     for (let i = 1; i < signs.length; i++) {
       if (signs[i] === "-" && signs[i - 1] === "-") errs.push(`第${i}~${i + 1}笔减号相邻`);
     }
@@ -130,20 +142,22 @@ export function validateProblem(p: Problem, digits: number, includeSub: boolean)
   return errs;
 }
 
-/** 生成一道珠心算加减题(Problem 形状)。 */
+/** 生成一道珠心算加减题(Problem 形状)。位数在 [minDigits, maxDigits] 间随机。 */
 export function buildAbacusProblem(cfg: AbacusCfg): Problem {
-  const d = Math.max(1, Math.min(9, cfg.digits));
+  const lo = Math.max(1, Math.min(9, Math.min(cfg.minDigits, cfg.maxDigits)));
+  const hi = Math.max(1, Math.min(9, Math.max(cfg.minDigits, cfg.maxDigits)));
   const count = Math.max(2, cfg.count);
-  const strictAdjacent = d * 2 <= 10;
+  const strictAdjacent = hi * 2 <= 10;
 
   const attempt = (): Problem | null => {
-    const signs = planSigns(count, cfg.includeSub);
+    const signs = planSigns(count, cfg.addsub);
     const terms: number[] = [];
     let running = 0;
 
     for (let i = 0; i < count; i++) {
       const forbidden =
         strictAdjacent && terms.length ? new Set(digitsOf(terms[terms.length - 1])) : new Set<number>();
+      const d = randInt(lo, hi);
 
       if (signs[i] === "-") {
         let placed = false;
@@ -165,7 +179,7 @@ export function buildAbacusProblem(cfg: AbacusCfg): Problem {
     }
 
     const problem: Problem = { terms, signs, answer: running };
-    if (validateProblem(problem, d, cfg.includeSub).length) return null;
+    if (validateProblem(problem, cfg).length) return null;
     return problem;
   };
 
@@ -174,7 +188,7 @@ export function buildAbacusProblem(cfg: AbacusCfg): Problem {
     if (r) return r;
   }
   // 兜底:强制纯加
-  return buildAbacusProblem({ ...cfg, includeSub: false });
+  return buildAbacusProblem({ ...cfg, addsub: "add" });
 }
 
 // ---- 计分 ----
@@ -183,11 +197,14 @@ const DIGIT_WEIGHT = [0, 1, 1.4, 2, 2.8, 3.8, 5, 6.5, 8, 10];
 const MODE_FACTOR: Record<AbacusMode, number> = { glance: 1, flash: 1.15, listen: 1.3 };
 
 export function previewScore(cfg: AbacusCfg): number {
-  const w = DIGIT_WEIGHT[cfg.digits] ?? cfg.digits;
+  const avgDigits = Math.round((cfg.minDigits + cfg.maxDigits) / 2);
+  const w = DIGIT_WEIGHT[avgDigits] ?? avgDigits;
   const speed =
     cfg.mode === "flash" ? Math.min(8, Math.max(0.4, 1000 / Math.max(cfg.speedMs, 100))) : 1;
-  const sub = cfg.includeSub ? 1.3 : 1;
-  return Math.round(cfg.count * w * speed * sub * MODE_FACTOR[cfg.mode] * 10);
+  const sub = cfg.addsub === "add" ? 1 : 1.3;
+  // 一次闪多笔更难,略给系数
+  const batch = cfg.mode === "flash" && cfg.flashBatch > 1 ? 1 + (cfg.flashBatch - 1) * 0.15 : 1;
+  return Math.round(cfg.count * w * speed * sub * MODE_FACTOR[cfg.mode] * batch * 10);
 }
 
 export function computeScore(cfg: AbacusCfg, correct: boolean): number {
@@ -196,7 +213,9 @@ export function computeScore(cfg: AbacusCfg, correct: boolean): number {
 
 /** leaderboard 的 mode 字符串:同一模式+配置的人互相比。 */
 export function abacusMode(cfg: AbacusCfg): string {
-  return `${cfg.mode}-${cfg.count}q-${cfg.digits}d${cfg.includeSub ? "-mix" : ""}`;
+  const dig = cfg.minDigits === cfg.maxDigits ? `${cfg.minDigits}d` : `${cfg.minDigits}_${cfg.maxDigits}d`;
+  const b = cfg.mode === "flash" && cfg.flashBatch > 1 ? `-b${cfg.flashBatch}` : "";
+  return `${cfg.mode}-${cfg.count}q-${dig}-${cfg.addsub}${b}`;
 }
 
 // ---- 中文数字读法(听算 TTS) ----
