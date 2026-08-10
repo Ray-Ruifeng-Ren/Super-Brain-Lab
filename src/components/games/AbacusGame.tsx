@@ -63,7 +63,7 @@ function clampCfg(c: Partial<AbacusCfg>): AbacusCfg {
   const addsub: AddSubType = c.addsub === "add" || c.addsub === "sub" ? c.addsub : "mix";
   const cl = (v: number | undefined, lo: number, hi: number, dv: number) => Math.min(hi, Math.max(lo, Math.round(v ?? dv)));
   const minD = cl(c.minDigits, 1, 9, d.minDigits);
-  const maxD = Math.max(minD, cl(c.maxDigits, 1, 9, d.maxDigits));
+  const maxD = cl(c.maxDigits, 1, 9, d.maxDigits); // 独立,不与最小联动(引擎会自动按区间取值)
   const count = cl(c.count, 1, 200, d.count);
   return {
     project, mode: m, count, minDigits: minD, maxDigits: maxD,
@@ -530,8 +530,8 @@ function AddsubParams({ cfg, set, mistakeMode, onMistakeModeChange }: {
       <div className="grid grid-cols-2 gap-2.5">
         <Card label="位数" emoji="🔢" hint="可范围">
           <div className="flex flex-col gap-2">
-            <Row label="最小"><MiniStepper value={cfg.minDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ minDigits: v, maxDigits: Math.max(v, cfg.maxDigits) })} /></Row>
-            <Row label="最大"><MiniStepper value={cfg.maxDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ maxDigits: v, minDigits: Math.min(v, cfg.minDigits) })} /></Row>
+            <Row label="最小"><MiniStepper value={cfg.minDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ minDigits: v })} /></Row>
+            <Row label="最大"><MiniStepper value={cfg.maxDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ maxDigits: v })} /></Row>
           </div>
         </Card>
         <Card label="笔数" emoji="✏️" hint="1–200">
