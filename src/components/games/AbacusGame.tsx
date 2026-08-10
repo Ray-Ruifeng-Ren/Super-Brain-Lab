@@ -105,6 +105,7 @@ export interface AbacusGameProps {
 export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange }: AbacusGameProps) {
   const [cfg, setCfg] = useState<AbacusCfg>(loadStoredCfg);
   const [view, setView] = useState<"home" | "train">("home");
+  const [showMore, setShowMore] = useState(false);
   const [modalProject, setModalProject] = useState<Project | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
   const [round, setRound] = useState<Round | null>(null);
@@ -252,13 +253,31 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2.5" style={{ marginTop: 20 }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: T.ink, background: "rgba(255,255,255,.7)", borderRadius: 999, padding: "4px 12px" }}>更多项目</span>
-            {MORE.map((m) => (
-              <button key={m.id} onClick={() => openProject(m.id)}
-                style={{ ...candyBtn(PROJ_COLOR[m.id].c, PROJ_COLOR[m.id].cD), padding: "9px 18px", fontSize: 14 }}>{m.emoji} {m.label}</button>
-            ))}
+          <div style={{ marginTop: 18, textAlign: "center" }}>
+            <button onClick={() => setShowMore((s) => !s)}
+              style={{ background: "rgba(255,255,255,.82)", border: `2px solid ${T.line}`, borderRadius: 999, padding: "9px 22px", fontSize: 14, fontWeight: 800, color: T.ink, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,.10)" }}>
+              {showMore ? "收起 ▴" : "更多项目 ▾"}
+            </button>
           </div>
+          {showMore && (
+            <div className="grid gap-3 md:grid-cols-3" style={{ marginTop: 14 }}>
+              {MORE.map((m) => {
+                const col = PROJ_COLOR[m.id];
+                const desc = PROJECTS.find((p) => p.id === m.id)?.desc ?? "";
+                return (
+                  <button key={m.id} onClick={() => openProject(m.id)}
+                    className="animate-pop-in"
+                    style={{ border: "none", cursor: "pointer", borderRadius: 20, padding: "16px 16px", textAlign: "left", display: "flex", alignItems: "center", gap: 12, background: `linear-gradient(180deg, ${col.c}, ${col.cD})`, color: "#fff", boxShadow: `0 8px 20px ${col.cD}44, inset 0 2px 0 rgba(255,255,255,.4)` }}>
+                    <span style={{ fontSize: 34 }}>{m.emoji}</span>
+                    <span>
+                      <div style={{ fontSize: 18, fontWeight: 900 }}>{m.label}</div>
+                      <div style={{ fontSize: 11.5, opacity: 0.9, fontWeight: 600 }}>{desc}</div>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         {modalProject && <ParamModal cfg={cfg} set={set} project={modalProject} onCancel={() => setModalProject(null)} onStart={startFromModal} mistakeMode={mistakeMode} onMistakeModeChange={onMistakeModeChange} />}
       </>
