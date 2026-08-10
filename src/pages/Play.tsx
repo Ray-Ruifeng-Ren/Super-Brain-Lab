@@ -68,7 +68,7 @@ const Play = () => {
       style={isAbacus ? { background: "linear-gradient(180deg, #BDE8FF 0%, #DDF3FF 34%, #FBF1D8 70%, #FFF6E6 100%)" } : undefined}
     >
       {isAbacus && <AbacusScene view={abacusView} />}
-      <header className={cn("sticky top-0 z-30 border-b", isAbacus ? "border-transparent bg-white/40 backdrop-blur" : "border-border bg-background/90 backdrop-blur")}>
+      <header className={cn("sticky top-0 z-30", isAbacus ? "border-b-0 bg-transparent" : "border-b border-border bg-background/90 backdrop-blur")}>
         <div className="container flex items-center justify-between py-3">
           <button
             onClick={() => navigate("/")}

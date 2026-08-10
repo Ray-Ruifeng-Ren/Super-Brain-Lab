@@ -227,9 +227,9 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
   // ================= HOME =================
   if (view === "home") {
     const MODE_CARDS: { mode: AbacusMode; img: string; label: string }[] = [
+      { mode: "flash", img: "/card-flash.png", label: "闪电心算" },
       { mode: "glance", img: "/card-kan.png", label: "看算" },
       { mode: "listen", img: "/card-ting.png", label: "听算" },
-      { mode: "flash", img: "/card-flash.png", label: "闪电心算" },
     ];
     const openModeCard = (mode: AbacusMode) => { set({ project: "addsub", mode }); setModalProject("addsub"); };
     const MORE: { id: Project; label: string; emoji: string }[] = [
@@ -291,7 +291,7 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
 
       {phase === "answer" && round && (
         <div className="flex flex-col gap-3">
-          <AnswerPrompt round={round} />
+          <AnswerPrompt round={round} mode={cfg.mode} />
           <AnswerPad value={input} onChange={setInput} onSubmit={() => submit(input)} onGiveUp={backHome}
             canReplay={round.project === "addsub" && cfg.mode === "listen"} onReplay={() => { setStepIdx(0); setShowTerm(false); setPhase("playing"); }} />
         </div>
@@ -369,12 +369,13 @@ function TopBar({ left, right, onGiveUp }: { left: string; right?: string; onGiv
 }
 
 // ---------- 作答提示 ----------
-function AnswerPrompt({ round }: { round: Round }) {
+function AnswerPrompt({ round, mode }: { round: Round; mode: AbacusMode }) {
   if (round.project === "addsub" && round.terms) {
-    // 看算(glance)时把竖式显示出来;闪/听已揭示完毕只提示
+    // 仅「看算」把竖式显示出来;闪算/听算已逐笔揭示完毕,作答时不再显示算式(否则等于没考记忆)
+    const showStack = mode === "glance";
     return (
       <>
-        {round.exprStr && round.signs && (
+        {showStack && round.signs && (
           <div style={{ background: "#fff", border: `2px solid ${T.line}`, borderRadius: 18, padding: 16, marginBottom: 4 }}>
             <div className="flex flex-col items-end gap-0.5 font-mono-tabular" style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>
               {round.terms.map((t, i) => (
@@ -386,7 +387,9 @@ function AnswerPrompt({ round }: { round: Round }) {
             </div>
           </div>
         )}
-        <div style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: T.coralD }}>🤔 算出来了吗?填答案～</div>
+        <div style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: T.coralD }}>
+          {showStack ? "🤔 答案是多少?" : "🤔 都记住了吗?填答案～"}
+        </div>
       </>
     );
   }
@@ -546,6 +549,8 @@ function AddsubParams({ cfg, set, mistakeMode, onMistakeModeChange }: {
           <Card label="单笔时间" emoji="⚡" hint="越小越快">
             <div className="flex flex-wrap items-center gap-1.5">
               {SPEED_PRESETS.map((s) => (<Pill key={s.value} on={cfg.speedMs === s.value} color={T.sun} onClick={() => set({ speedMs: s.value })}>{s.label}</Pill>))}
+              <span style={{ fontSize: 10, color: T.inkSoft }}>或</span>
+              <SecInput value={SPEED_PRESETS.some((s) => s.value === cfg.speedMs) ? null : cfg.speedMs} onCommit={(ms) => set({ speedMs: ms })} />
             </div>
           </Card>
         )}
@@ -666,5 +671,23 @@ function NumInput({ value, min, max, onCommit }: { value: number | null; min: nu
   return (
     <input inputMode="numeric" value={text} placeholder="自定" onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       className="font-mono-tabular" style={{ height: 30, width: 46, borderRadius: 10, border: `2px solid ${T.line}`, background: "#fff", textAlign: "center", fontSize: 12.5, fontWeight: 800, color: T.ink, outline: "none" }} />
+  );
+}
+
+// 秒输入(0.01 步进)→ 提交毫秒。范围 0.1~5 秒。
+function SecInput({ value, onCommit }: { value: number | null; onCommit: (ms: number) => void }) {
+  const toSec = (ms: number | null) => (ms == null ? "" : String(+(ms / 1000).toFixed(2)));
+  const [text, setText] = useState(toSec(value));
+  useEffect(() => { setText(toSec(value)); }, [value]);
+  const commit = (raw: string) => {
+    const n = parseFloat(raw.replace(/[^\d.]/g, ""));
+    if (!isNaN(n)) onCommit(Math.min(5000, Math.max(100, Math.round(n * 1000))));
+  };
+  return (
+    <div className="flex items-center gap-1">
+      <input inputMode="decimal" value={text} placeholder="自定" onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        className="font-mono-tabular" style={{ height: 30, width: 50, borderRadius: 10, border: `2px solid ${T.line}`, background: "#fff", textAlign: "center", fontSize: 12.5, fontWeight: 800, color: T.ink, outline: "none" }} />
+      <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700 }}>秒</span>
+    </div>
   );
 }
