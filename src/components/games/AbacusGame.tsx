@@ -100,9 +100,11 @@ export interface AbacusGameProps {
   onViewChange?: (view: "home" | "train") => void;
   mistakeMode?: boolean;
   onMistakeModeChange?: (v: boolean) => void;
+  /** Deep-link entry: preselect an add/sub mode and open its config (from a homepage card). */
+  initialMode?: AbacusMode;
 }
 
-export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange }: AbacusGameProps) {
+export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange, initialMode }: AbacusGameProps) {
   const [cfg, setCfg] = useState<AbacusCfg>(loadStoredCfg);
   const [view, setView] = useState<"home" | "train">("home");
   const [showMore, setShowMore] = useState(false);
@@ -116,6 +118,15 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
   const [countdown, setCountdown] = useState(3);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usedMistakeKeysRef = useRef<Set<string>>(new Set());
+
+  // Deep-link from a homepage card (/play/abacus?mode=listen|glance): jump
+  // straight into add/sub with that mode preselected and its config open.
+  useEffect(() => {
+    if (!initialMode) return;
+    setCfg((c) => ({ ...c, project: "addsub", mode: initialMode }));
+    setModalProject("addsub");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch { /* noop */ } }, [cfg]);
   useEffect(() => { onCfgChange?.(cfg); }, [cfg, onCfgChange]);

@@ -1,10 +1,21 @@
 import { useEffect, useRef } from "react";
-import videoAsset from "@/assets/hero-bg.mp4.asset.json";
 
 /**
- * Cinematic looping background video.
- * - Starts visible immediately, gentle fade at the loop seam.
+ * Cinematic looping background video with a hand-rolled fade-in / fade-out
+ * loop so the seam between iterations is invisible:
+ *   - requestAnimationFrame continuously watches currentTime / duration
+ *   - fade in  over the first 0.5s   (opacity 0 -> 1)
+ *   - fade out over the last  0.5s   (opacity 1 -> 0)
+ *   - on `ended`: opacity 0, wait 100ms, reset currentTime, play() again
+ *
+ * Gradient overlay (from-background via-transparent to-background) melts the
+ * footage edges into the page background so the nav and cards stay legible.
  */
+const VIDEO_URL =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4";
+
+const FADE = 0.5; // seconds at head/tail of each loop
+
 export default function VideoBackdrop() {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -12,58 +23,58 @@ export default function VideoBackdrop() {
     const v = ref.current;
     if (!v) return;
     let raf = 0;
-    const FADE = 0.5;
 
     const tick = () => {
-      if (v.duration && !isNaN(v.duration)) {
-        const t = v.currentTime;
-        const d = v.duration;
+      const { currentTime, duration } = v;
+      if (duration && Number.isFinite(duration)) {
         let o = 1;
-        if (t < FADE) o = Math.max(0.2, t / FADE);
-        else if (t > d - FADE) o = Math.max(0.2, (d - t) / FADE);
-        v.style.opacity = String(o);
+        if (currentTime < FADE) o = currentTime / FADE;
+        else if (currentTime > duration - FADE)
+          o = Math.max(0, (duration - currentTime) / FADE);
+        v.style.opacity = o.toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
 
     const onEnded = () => {
-      setTimeout(() => {
+      v.style.opacity = "0";
+      window.setTimeout(() => {
         v.currentTime = 0;
         void v.play().catch(() => {});
-      }, 80);
+      }, 100);
     };
 
     v.addEventListener("ended", onEnded);
     void v.play().catch(() => {});
     raf = requestAnimationFrame(tick);
 
+    const onVis = () => {
+      if (document.hidden) cancelAnimationFrame(raf);
+      else raf = requestAnimationFrame(tick);
+    };
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
       cancelAnimationFrame(raf);
       v.removeEventListener("ended", onEnded);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background">
       <video
         ref={ref}
-        src={videoAsset.url}
+        src={VIDEO_URL}
         muted
         playsInline
         autoPlay
-        loop
         preload="auto"
         className="absolute inset-0 h-full w-full object-cover"
-        style={{ opacity: 1, transition: "opacity 160ms linear" }}
+        style={{ opacity: 0 }}
       />
-      {/* Very subtle warm wash — keep footage visible, lift legibility only at edges */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 50% 0%, rgba(40,30,15,0.10) 0%, rgba(20,15,8,0.05) 40%, rgba(20,15,8,0.35) 100%)",
-        }}
-      />
+      {/* Edges melt into the page background; footage stays visible in the middle band. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
     </div>
   );
 }

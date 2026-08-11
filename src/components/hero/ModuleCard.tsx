@@ -13,6 +13,8 @@ type Props = {
   onHover: () => void;
   onLeave: () => void;
   shift: number;
+  /** Overrides the default `/play/${id}` destination (e.g. deep-linking an abacus mode). */
+  href?: string;
 };
 
 // Unified vintage deep-gold palette across every card.
@@ -29,7 +31,7 @@ const PALETTE: Record<string, typeof GOLD> = {
 };
 
 export function ModuleCard({
-  id, index, name, tagline, featured, rotate, hovered, onHover, onLeave, shift,
+  id, index, name, tagline, featured, rotate, hovered, onHover, onLeave, shift, href,
 }: Props) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, sx: 50 });
@@ -56,7 +58,7 @@ export function ModuleCard({
   return (
     <Link
       ref={ref}
-      to={`/play/${id}`}
+      to={href ?? `/play/${id}`}
       onMouseEnter={onHover}
       onMouseMove={onMove}
       onMouseLeave={onOut}

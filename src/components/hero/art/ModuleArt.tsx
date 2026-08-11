@@ -99,6 +99,31 @@ export function ArtOrbit() {
   );
 }
 
+export function ArtListen() {
+  // 听算 — speaker cone + sound waves
+  return (
+    <svg {...common}>
+      <path d="M22 42 H34 L48 30 V70 L34 58 H22 Z" />
+      <path d="M56 38 Q64 50 56 62" opacity="0.85" />
+      <path d="M64 30 Q78 50 64 70" opacity="0.55" />
+      <path d="M72 24 Q90 50 72 76" opacity="0.32" />
+      <circle cx="35" cy="50" r="2.4" fill="hsl(var(--primary))" stroke="none" />
+    </svg>
+  );
+}
+
+export function ArtGlance() {
+  // 看算 — watchful eye
+  return (
+    <svg {...common}>
+      <path d="M12 50 Q50 22 88 50 Q50 78 12 50 Z" />
+      <circle cx="50" cy="50" r="12" />
+      <circle cx="50" cy="50" r="3" fill="hsl(var(--primary))" stroke="none" />
+      <path d="M50 26 L50 20 M74 34 L79 29 M26 34 L21 29" opacity="0.7" />
+    </svg>
+  );
+}
+
 export const ART: Record<string, () => JSX.Element> = {
   flashmath: ArtFlashMath,
   gauntlet: ArtGauntlet,
@@ -107,4 +132,6 @@ export const ART: Record<string, () => JSX.Element> = {
   reaction: ArtReaction,
   cards: ArtCards,
   orbit: ArtOrbit,
+  listen: ArtListen,
+  glance: ArtGlance,
 };

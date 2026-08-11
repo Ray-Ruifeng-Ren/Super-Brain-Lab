@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { GAMES, type GameId } from "@/lib/leaderboard";
@@ -6,7 +6,7 @@ import { SchulteGame } from "@/components/games/SchulteGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
 import { FlashMathGame, type FlashCfg } from "@/components/games/FlashMathGame";
 import { AbacusGame } from "@/components/games/AbacusGame";
-import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg } from "@/lib/abacus";
+import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg, type AbacusMode } from "@/lib/abacus";
 import { NBackGame } from "@/components/games/NBackGame";
 import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { OrbitFocusGame } from "@/components/games/OrbitFocusGame";
@@ -22,8 +22,12 @@ import { cn } from "@/lib/utils";
 
 const Play = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const [searchParams] = useSearchParams();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const modeParam = searchParams.get("mode");
+  const initialAbacusMode: AbacusMode | undefined =
+    modeParam === "flash" || modeParam === "glance" || modeParam === "listen" ? modeParam : undefined;
   const [refreshKey, setRefreshKey] = useState(0);
   const [schulteSize, setSchulteSize] = useState(4);
   const [flashCfg, setFlashCfg] = useState<FlashCfg>({ count: 5, digits: 2, speedMs: 700, includeSub: false, rounds: 1 });
@@ -137,6 +141,7 @@ const Play = () => {
                 onViewChange={setAbacusView}
                 mistakeMode={abacusMistakeMode}
                 onMistakeModeChange={setAbacusMistakeMode}
+                initialMode={initialAbacusMode}
               />
             )}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}

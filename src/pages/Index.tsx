@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { AccountMenu } from "@/components/AccountMenu";
 import { LanguageToggle, useI18n } from "@/lib/i18n";
-import TreeBackdrop from "@/components/hero/TreeBackdrop";
+import VideoBackdrop from "@/components/hero/VideoBackdrop";
 import SparkleCursor from "@/components/hero/SparkleCursor";
 import CardDeck from "@/components/hero/CardDeck";
 
@@ -10,9 +10,9 @@ const Index = () => {
   const { t } = useI18n();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-screen overflow-hidden text-foreground">
       {/* Cinematic looping video + cursor sparkles */}
-      <TreeBackdrop />
+      <VideoBackdrop />
       <SparkleCursor />
 
       {/* Nav */}
@@ -83,7 +83,7 @@ const Index = () => {
         <section id="modules" className="relative pb-6">
           <div className="mb-3 flex items-center gap-4">
             <span className="font-mono-tabular text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-              MODULES · 07
+              MODULES · 09
             </span>
             <div className="h-px flex-1 bg-border/70" />
             <span className="font-mono-tabular text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
