@@ -3,16 +3,16 @@ import { GAMES, type GameId } from "@/lib/leaderboard";
 import { useI18n } from "@/lib/i18n";
 import { ModuleCard } from "./ModuleCard";
 
+// The other, already-existing modules — hidden behind "展开更多".
+const MORE_IDS: GameId[] = ["gauntlet", "schulte", "nback", "reaction", "cards", "orbit"];
+
 type CardCfg = {
-  key: string;          // drives artwork + palette (ART[key])
-  href: string;         // destination
+  key: string; // drives artwork + palette (ART[key])
+  href: string;
   name: string;
   tagline: string;
   featured?: boolean;
 };
-
-// The other, already-existing modules — hidden behind "展开更多".
-const MORE_IDS: GameId[] = ["gauntlet", "schulte", "nback", "reaction", "cards", "orbit"];
 
 export default function CardDeck() {
   const { t, lang } = useI18n();
@@ -21,14 +21,19 @@ export default function CardDeck() {
 
   const fromGame = (id: GameId) => ({ name: t.games[id].name, tagline: GAMES[id].tagline });
 
-  // Default three, centered: 闪电心算 · 听算 · 看算
+  // 默认主项(居中):闪电心算 · 看算 · 听算 —— 全部走 flashmath 统一交互;
+  // 乘法 / 除法 已并入「看算」「听算」内的「运算」选项,不再单列卡片。
   const featured: CardCfg[] = [
-    { key: "flashmath", href: "/play/flashmath", featured: true, ...fromGame("flashmath") },
-    { key: "listen", href: "/play/abacus?mode=listen", name: lang === "en" ? "Listen Calc" : "听算", tagline: "Listen & Calc" },
-    { key: "glance", href: "/play/abacus?mode=glance", name: lang === "en" ? "Glance Calc" : "看算", tagline: "Glance & Calc" },
+    { key: "flashmath", href: "/play/flashmath?mode=flash", name: lang === "en" ? "Flash Math" : "闪电心算", tagline: "Flash Mental Arithmetic" },
+    { key: "glance", href: "/play/flashmath?mode=glance", featured: true, name: lang === "en" ? "Glance Calc" : "看算", tagline: "加减 · 乘 · 除" },
+    { key: "listen", href: "/play/flashmath?mode=listen", name: lang === "en" ? "Listen Calc" : "听算", tagline: "加减 · 乘 · 除" },
   ];
 
-  const more: CardCfg[] = MORE_IDS.map((id) => ({ key: id, href: `/play/${id}`, ...fromGame(id) }));
+  // 更多:看珠(珠算特有,仍直接进) + 认知游戏
+  const more: CardCfg[] = [
+    { key: "bead", href: "/play/abacus?project=bead", name: lang === "en" ? "Bead Read" : "看珠", tagline: "Bead Reading" },
+    ...MORE_IDS.map((id) => ({ key: id, href: `/play/${id}`, ...fromGame(id) })),
+  ];
 
   const renderCard = (c: CardCfg, i: number, centerIdx: number) => {
     const rot = (i - centerIdx) * 1.2; // gentle fan around the middle card
@@ -55,8 +60,8 @@ export default function CardDeck() {
 
   return (
     <div className="flex flex-col items-center">
-      {/* Default three — centered */}
-      <div className="grid w-full max-w-2xl grid-cols-3 gap-3 sm:gap-4">
+      {/* Default main items — centered */}
+      <div className="grid w-full max-w-3xl grid-cols-3 gap-3 sm:gap-4">
         {featured.map((c, i) => renderCard(c, i, 1))}
       </div>
 

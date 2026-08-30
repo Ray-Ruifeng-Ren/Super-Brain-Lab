@@ -4,19 +4,23 @@ import { ArrowLeft } from "lucide-react";
 import { GAMES, type GameId } from "@/lib/leaderboard";
 import { SchulteGame } from "@/components/games/SchulteGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
-import { FlashMathGame, type FlashCfg } from "@/components/games/FlashMathGame";
+import { FlashMathGame, type FlashCfg, type FlashMode } from "@/components/games/FlashMathGame";
 import { AbacusGame } from "@/components/games/AbacusGame";
-import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg, type AbacusMode } from "@/lib/abacus";
+import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg, type AbacusMode, type Project } from "@/lib/abacus";
 import { NBackGame } from "@/components/games/NBackGame";
 import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { OrbitFocusGame } from "@/components/games/OrbitFocusGame";
 import { GauntletFlashGame } from "@/components/games/GauntletFlashGame";
 import { DEFAULT_GAUNTLET, encodeMode, type GauntletConfig } from "@/lib/gauntlet";
 import { ProLeaderboard } from "@/components/ProLeaderboard";
+import { RankBoards } from "@/components/RankBoards";
+import { modePrefix } from "@/lib/difficulty";
 import { AccountMenu } from "@/components/AccountMenu";
+import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { PracticeLog } from "@/components/PracticeLog";
 import { MistakeBook } from "@/components/MistakeBook";
 import { PracticeStats } from "@/components/PracticeStats";
+import Embers from "@/components/hero/Embers";
 import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -26,11 +30,18 @@ const Play = () => {
   const { t } = useI18n();
   const navigate = useNavigate();
   const modeParam = searchParams.get("mode");
+  const projectParam = searchParams.get("project");
   const initialAbacusMode: AbacusMode | undefined =
     modeParam === "flash" || modeParam === "glance" || modeParam === "listen" ? modeParam : undefined;
+  const flashInitialMode: FlashMode | undefined =
+    modeParam === "flash" || modeParam === "glance" || modeParam === "listen" ? modeParam :
+    modeParam === "multiply" || modeParam === "divide" ? "glance" : // 旧链接:乘/除已并入看算,内选运算
+    undefined;
+  const initialAbacusProject: Project | undefined =
+    projectParam === "multiply" || projectParam === "divide" || projectParam === "bead" ? projectParam : undefined;
   const [refreshKey, setRefreshKey] = useState(0);
   const [schulteSize, setSchulteSize] = useState(4);
-  const [flashCfg, setFlashCfg] = useState<FlashCfg>({ count: 5, digits: 2, speedMs: 700, includeSub: false, rounds: 1 });
+  const [flashCfg, setFlashCfg] = useState<FlashCfg>({ mode: flashInitialMode ?? "flash", op: "addsub", count: 5, digits: 2, speedMs: 700, listenSec: 1000, listenLang: "zh", includeSub: false, rounds: 1, mulA: 2, mulB: 2, divA: 3, divB: 1 });
   const [flashMistakeMode, setFlashMistakeMode] = useState(false);
   const [abacusCfg, setAbacusCfg] = useState<AbacusCfg>(DEFAULT_ABACUS_CFG);
   const [abacusMistakeMode, setAbacusMistakeMode] = useState(false);
@@ -65,14 +76,13 @@ const Play = () => {
     "default";
 
   const isAbacus = game.id === "abacus";
+  const isFlash = game.id === "flashmath";
+  const flashPrefix = modePrefix(flashCfg.mode ?? flashInitialMode ?? "flash");
 
   return (
-    <div
-      className={cn("min-h-screen", isAbacus ? "relative overflow-hidden" : "bg-background")}
-      style={isAbacus ? { background: "linear-gradient(180deg, #BDE8FF 0%, #DDF3FF 34%, #FBF1D8 70%, #FFF6E6 100%)" } : undefined}
-    >
-      {isAbacus && <AbacusScene view={abacusView} />}
-      <header className={cn("sticky top-0 z-30", isAbacus ? "border-b-0 bg-transparent" : "border-b border-border bg-background/90 backdrop-blur")}>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background is the global cinematic video (rendered in App) — same on every page. */}
+      <header className={cn("sticky top-0 z-30", isAbacus ? "border-b-0 bg-transparent" : "border-b border-border bg-background/80 backdrop-blur")}>
         <div className="container flex items-center justify-between py-3">
           <button
             onClick={() => navigate("/")}
@@ -83,13 +93,14 @@ const Play = () => {
             <span className="ml-1 text-foreground">{t.games[game.id]?.name ?? game.name}</span>
           </button>
           <div className="flex items-center gap-2">
+            {isFlash && <BackgroundPicker />}
             <LanguageToggle />
             <AccountMenu />
           </div>
         </div>
       </header>
 
-      <main className={cn("container py-2 md:py-3", isAbacus && "relative z-10")}>
+      <main className={cn("container py-2 md:py-3", isAbacus && "relative z-10", isFlash && "flash-warm")}>
         {game.id === "flashmath" && (
           <div className="mb-2">
             <PracticeStats game="flashmath" refreshKey={refreshKey} />
@@ -122,6 +133,42 @@ const Play = () => {
           </div>
         )}
 
+        {isFlash ? (
+          /* 闪电心算:配置 + 训练台 靠左堆叠;火花是背景的一部分,露在右侧空白区 */
+          <div className="relative">
+            <Embers />
+            <div className="relative z-10">
+              {/* 配置 = 主区:整幅宽度、更大更醒目 */}
+              <div className="fw-panel rounded-2xl border border-border bg-card/80 p-4 shadow-lg backdrop-blur md:p-6">
+                <FlashMathGame
+                  onFinished={handleFinished}
+                  onCfgChange={setFlashCfg}
+                  mistakeMode={flashMistakeMode}
+                  onMistakeModeChange={setFlashMistakeMode}
+                  initialMode={flashInitialMode}
+                />
+              </div>
+              {/* 训练台:靠左排布,角色/火花露在右侧空白区 */}
+              <div className="mt-3 lg:pr-[34%]">
+              <div className="fw-panel min-h-[420px] rounded-2xl border border-border bg-card/80 p-3 backdrop-blur md:p-4">
+                <PracticeLog
+                  game="flashmath"
+                  refreshKey={refreshKey}
+                  extraTab={<RankBoards game={game.id} prefix={flashPrefix} refreshKey={refreshKey} />}
+                  mistakeTab={
+                    <MistakeBook
+                      game="flashmath"
+                      refreshKey={refreshKey}
+                      mistakeMode={flashMistakeMode}
+                      onMistakeModeChange={setFlashMistakeMode}
+                    />
+                  }
+                />
+              </div>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className={cn("grid gap-3", isAbacus && abacusView === "home" ? "" : "lg:grid-cols-[1fr_560px]")}>
           <div className={cn("flex flex-col", isAbacus ? "" : "rounded-md border border-border bg-card p-3 md:p-4")}>
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
@@ -142,6 +189,7 @@ const Play = () => {
                 mistakeMode={abacusMistakeMode}
                 onMistakeModeChange={setAbacusMistakeMode}
                 initialMode={initialAbacusMode}
+                initialProject={initialAbacusProject}
               />
             )}
             {game.id === "nback" && <NBackGame onFinished={handleFinished} onCfgChange={setNbackCfg} />}
@@ -215,7 +263,7 @@ const Play = () => {
                 <PracticeLog
                   game="flashmath"
                   refreshKey={refreshKey}
-                  extraTab={<ProLeaderboard game={game.id} mode={mode} refreshKey={refreshKey} />}
+                  extraTab={<RankBoards game={game.id} prefix={flashPrefix} refreshKey={refreshKey} />}
                   mistakeTab={
                     <MistakeBook
                       game="flashmath"
@@ -248,12 +296,13 @@ const Play = () => {
           </aside>
           )}
         </div>
+        )}
       </main>
     </div>
   );
 };
 
-// 珠心算专属:童话世界背景(原创绘制,借鉴洛克王国的构图与配色,未使用其素材)
+// 珠心算专属:童话世界背景(原创绘制)
 function Cloud({ x, y, s, o = 0.95 }: { x: number; y: number; s: number; o?: number }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`} opacity={o}>

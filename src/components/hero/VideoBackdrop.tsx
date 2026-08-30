@@ -1,27 +1,48 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { getFlashBg, getFlashBgTransform, FLASH_BG_EVENT, CALM_BG } from "@/lib/flashBackground";
 
 /**
- * Cinematic looping background video with a hand-rolled fade-in / fade-out
- * loop so the seam between iterations is invisible:
- *   - requestAnimationFrame continuously watches currentTime / duration
- *   - fade in  over the first 0.5s   (opacity 0 -> 1)
- *   - fade out over the last  0.5s   (opacity 1 -> 0)
- *   - on `ended`: opacity 0, wait 100ms, reset currentTime, play() again
+ * Global cinematic background video with a hand-rolled fade-in / fade-out loop
+ * so the seam between iterations is invisible.
+ *
+ * Route-aware source:
+ *   - /play/flashmath (闪电心算) → the 火花 fire scene (thematic).
+ *   - everything else            → the valley scene.
+ * On a route change the video re-mounts and fades back in from 0.
  *
  * Gradient overlay (from-background via-transparent to-background) melts the
- * footage edges into the page background so the nav and cards stay legible.
+ * footage edges into the page background so nav/cards/panels stay legible.
  */
-const VIDEO_URL =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4";
+const VALLEY_URL = "/hero-cinematic.mp4";
 
 const FADE = 0.5; // seconds at head/tail of each loop
 
 export default function VideoBackdrop() {
   const ref = useRef<HTMLVideoElement>(null);
+  const { pathname } = useLocation();
+  const isFlash = pathname === "/play/flashmath";
+  // 闪电心算页背景可由用户自选,存本设备;监听切换事件即时更新
+  const [flashBg, setFlashBg] = useState(getFlashBg);
+  useEffect(() => {
+    if (!isFlash) return;
+    const sync = () => setFlashBg(getFlashBg());
+    sync();
+    window.addEventListener(FLASH_BG_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(FLASH_BG_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [isFlash]);
+  // 练习页默认「安静」(无视频):src 为 null,只留干净底色;首页/选了视频才播放。
+  const src = !isFlash ? VALLEY_URL : flashBg === CALM_BG ? null : flashBg;
+  const fit = isFlash ? getFlashBgTransform() : undefined; // 角色取景:放大+右移
 
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
+    v.style.opacity = "0";
     let raf = 0;
 
     const tick = () => {
@@ -59,20 +80,22 @@ export default function VideoBackdrop() {
       v.removeEventListener("ended", onEnded);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, []);
+  }, [src]);
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background">
-      <video
+      {src && <video
+        key={src}
         ref={ref}
-        src={VIDEO_URL}
+        src={src}
         muted
         playsInline
         autoPlay
         preload="auto"
         className="absolute inset-0 h-full w-full object-cover"
-        style={{ opacity: 0 }}
-      />
+        style={{ opacity: 0, transform: fit, transformOrigin: "center" }}
+      />}
+
       {/* Edges melt into the page background; footage stays visible in the middle band. */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
     </div>

@@ -3,6 +3,7 @@
 // scores are persisted in Supabase via supabase client.
 
 import { supabase } from "@/integrations/supabase/client";
+import { dayKey, streakFromDays, rankBy } from "@/lib/rankUtils";
 
 export type GameId = "flashmath" | "abacus" | "schulte" | "reaction" | "nback" | "cards" | "orbit" | "gauntlet";
 export type ScoreDirection = "lower" | "higher";
@@ -377,4 +378,58 @@ export function formatRelative(iso: string): string {
   const d = Math.floor(h / 24);
   if (d < 7) return `${d} 天前`;
   return new Date(ts).toLocaleDateString("zh-CN");
+}
+
+// ===== 项目榜单:难度系数榜 + 坚持榜(均按 mode 前缀区分项目) =====
+export interface RankRow { user_id: string; nickname: string; rank: number; }
+export interface DiffRankRow extends RankRow { D: number; }
+export interface StreakRankRow extends RankRow { streak: number; days: number; }
+
+export interface ProjectRanks { difficulty: DiffRankRow[]; persistence: StreakRankRow[]; }
+
+/** 一次拉取,算出某项目的难度系数榜 + 坚持榜(省一次网络往返;按时间倒序,截断时保留最近数据)。 */
+export async function getProjectRanks(game: GameId, prefix: string, limit = 20): Promise<ProjectRanks> {
+  const { data } = await supabase
+    .from("scores")
+    .select("user_id,meta,created_at,profiles(nickname)")
+    .eq("game", game)
+    .like("mode", `${prefix}%`)
+    .order("created_at", { ascending: false })
+    .limit(6000);
+
+  const rows = (data ?? []) as unknown as {
+    user_id: string; meta: { D?: number } | null; created_at: string; profiles: { nickname: string | null } | null;
+  }[];
+
+  const bestD = new Map<string, { user_id: string; nickname: string; D: number }>();
+  const byUser = new Map<string, { days: Set<string>; nickname: string }>();
+
+  for (const r of rows) {
+    const nickname = r.profiles?.nickname || "玩家";
+    const D = Number(r.meta?.D) || 0;
+    if (D > 0) {
+      const cur = bestD.get(r.user_id);
+      if (!cur || D > cur.D) bestD.set(r.user_id, { user_id: r.user_id, nickname, D });
+    }
+    let u = byUser.get(r.user_id);
+    if (!u) { u = { days: new Set(), nickname }; byUser.set(r.user_id, u); }
+    u.days.add(dayKey(r.created_at));
+  }
+
+  const difficulty = rankBy(
+    [...bestD.values()],
+    (a, b) => b.D - a.D,
+    (x) => x.D,
+    limit,
+  );
+  const persistence = rankBy(
+    [...byUser.entries()]
+      .map(([uid, u]) => ({ user_id: uid, nickname: u.nickname, streak: streakFromDays(u.days), days: u.days.size }))
+      .filter((x) => x.streak > 0),
+    (a, b) => b.streak - a.streak || b.days - a.days,
+    (x) => x.streak,
+    limit,
+  );
+
+  return { difficulty, persistence };
 }

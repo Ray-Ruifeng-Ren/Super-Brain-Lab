@@ -1,11 +1,29 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { getFlashBgHue, DEFAULT_FLASH_HUE, FLASH_BG_EVENT } from "@/lib/flashBackground";
 
 /**
  * Starlight sparkle field that emits glowing particles where the cursor moves.
  * Fixed full-screen canvas, pointer-events: none.
+ * 色相随「闪电心算」页所选背景变化(其它页面用默认暖金)。
  */
 export default function SparkleCursor() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const { pathname } = useLocation();
+  const isFlash = pathname === "/play/flashmath";
+  const hueRef = useRef(DEFAULT_FLASH_HUE);
+
+  // 同步光标粒子色相:闪电心算页跟随所选背景;换背景时即时更新
+  useEffect(() => {
+    const sync = () => { hueRef.current = isFlash ? getFlashBgHue() : DEFAULT_FLASH_HUE; };
+    sync();
+    window.addEventListener(FLASH_BG_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(FLASH_BG_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [isFlash]);
 
   useEffect(() => {
     const cv = ref.current;
@@ -38,7 +56,7 @@ export default function SparkleCursor() {
           life: 0,
           max: 60 + Math.random() * 60,
           size: Math.random() * 1.8 + 0.6,
-          hue: 38 + Math.random() * 18, // warm gold range
+          hue: hueRef.current + Math.random() * 18, // 跟随所选背景的色相
         });
       }
       if (particles.length > 600) particles.splice(0, particles.length - 600);
