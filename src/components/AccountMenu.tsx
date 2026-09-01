@@ -80,9 +80,17 @@ export function AccountMenu() {
           )}
         </div>
         <DropdownMenuSeparator />
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">
+              <Shield className="mr-2 h-3.5 w-3.5" /> 管理后台
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => supabase.auth.signOut()}>
           <LogOut className="mr-2 h-3.5 w-3.5" /> 退出登录
         </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
