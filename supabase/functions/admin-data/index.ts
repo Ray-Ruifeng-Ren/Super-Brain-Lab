@@ -51,16 +51,10 @@ Deno.serve(async (req) => {
           .eq("correct", true),
       ]);
 
-      const { data: leaderboard } = await admin.rpc("noop_never").then(
-        () => ({ data: null }),
-        () => ({ data: null }),
-      );
-
       return json({
         users: users ?? 0,
         attempts: attempts ?? 0,
         correct: correct ?? 0,
-        leaderboard,
       });
     }
 
