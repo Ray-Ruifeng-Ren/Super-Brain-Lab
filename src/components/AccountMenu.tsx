@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { AuthDialog } from "./AuthDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon, Pencil, Check } from "lucide-react";
+import { LogOut, User as UserIcon, Pencil, Check, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "@/hooks/use-toast";
 
 export function AccountMenu() {
@@ -13,6 +15,7 @@ export function AccountMenu() {
   const [authOpen, setAuthOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
+  const { isAdmin } = useIsAdmin();
 
   if (loading) {
     return <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />;
@@ -80,9 +83,17 @@ export function AccountMenu() {
           )}
         </div>
         <DropdownMenuSeparator />
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">
+              <Shield className="mr-2 h-3.5 w-3.5" /> 管理后台
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => supabase.auth.signOut()}>
           <LogOut className="mr-2 h-3.5 w-3.5" /> 退出登录
         </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
