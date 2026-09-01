@@ -102,9 +102,11 @@ export interface AbacusGameProps {
   onMistakeModeChange?: (v: boolean) => void;
   /** Deep-link entry: preselect an add/sub mode and open its config (from a homepage card). */
   initialMode?: AbacusMode;
+  /** Deep-link entry: preselect a project (multiply/divide/bead) and open its config. */
+  initialProject?: Project;
 }
 
-export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange, initialMode }: AbacusGameProps) {
+export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange, initialMode, initialProject }: AbacusGameProps) {
   const [cfg, setCfg] = useState<AbacusCfg>(loadStoredCfg);
   const [view, setView] = useState<"home" | "train">("home");
   const [showMore, setShowMore] = useState(false);
@@ -122,9 +124,13 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
   // Deep-link from a homepage card (/play/abacus?mode=listen|glance): jump
   // straight into add/sub with that mode preselected and its config open.
   useEffect(() => {
-    if (!initialMode) return;
-    setCfg((c) => ({ ...c, project: "addsub", mode: initialMode }));
-    setModalProject("addsub");
+    if (initialProject) {
+      setCfg((c) => ({ ...c, project: initialProject }));
+      setModalProject(initialProject);
+    } else if (initialMode) {
+      setCfg((c) => ({ ...c, project: "addsub", mode: initialMode }));
+      setModalProject("addsub");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -312,7 +318,7 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
           <div className="animate-bounce" style={{ fontSize: 60 }}>🧮</div>
           <div key={countdown} className="animate-pop-in" style={{ fontSize: 54, fontWeight: 900, color: T.coralD, marginTop: 6 }}>准备好啦！</div>
           <div style={{ fontSize: 14, color: T.inkSoft, fontWeight: 700, marginTop: 6 }}>
-            {cfg.project === "listen" || (cfg.project === "addsub" && cfg.mode === "listen") ? "🔊 打开声音,用心听～" : "👀 盯住屏幕中间～"}
+            {cfg.mode === "listen" ? "🔊 打开声音,用心听～" : "👀 盯住屏幕中间～"}
           </div>
         </div>
       )}
