@@ -2,7 +2,21 @@ import { describe, it, expect } from "vitest";
 import { buildAbacusProblem, validateProblem, type AbacusCfg } from "@/lib/abacus";
 
 const base: AbacusCfg = {
-  mode: "flash", count: 5, minDigits: 2, maxDigits: 3, speedMs: 700, flashBatch: 1, listenLevel: 1, addsub: "mix",
+  project: "addsub",
+  mode: "flash",
+  count: 5,
+  minDigits: 2,
+  maxDigits: 3,
+  speedMs: 700,
+  flashBatch: 1,
+  listenLevel: 1,
+  addsub: "mix",
+  aDigits: 2,
+  bDigits: 2,
+  divisorDigits: 1,
+  quotientDigits: 2,
+  beadDigits: 1,
+  beadSpeedMs: 2000,
 };
 
 describe("珠心算出题引擎 · 全规则回归", () => {
