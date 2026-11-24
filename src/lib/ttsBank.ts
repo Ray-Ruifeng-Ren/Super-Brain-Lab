@@ -86,10 +86,30 @@ export function voicePlaybackRate(voice: BankVoice, variant: BankVariant = getBa
 // 原块从「X万，加七」逗号处切,「万」被读成拖长的句末音(0.45s,连读只 0.19s);w2 从连读「X万八千」切在「八」的闭塞处(scratchpad/gen-wan.mjs)。
 // 新文件名而不是原地覆盖:词块库浏览器缓存 7 天(public/_headers)。只有女声 / 男声有 w2。
 const W2_WAN = (v: BankVariant, voice: BankVoice, i: number, final: boolean) => v === "E" && !final && voice !== "child" && i >= 1108 && i <= 1116;
-const tierPath = (voice: BankVoice, tier: number, i: number, final = false): string => {
+const tierRel = (voice: BankVoice, tier: number, i: number, final = false): string => {
   const v = getBankVariant();
   const dir = tier === 1 ? "" : `x${String(Math.round(tier * 100)).padStart(3, "0")}/`;
-  return siteUrl(`${ROOTS[v]}/zh/${voice}/${dir}${final ? "f" : "t"}${String(i).padStart(tokenSet(v).pad, "0")}${W2_WAN(v, voice, i, final) ? "w2" : ""}.mp3`);
+  return `${ROOTS[v]}/zh/${voice}/${dir}${final ? "f" : "t"}${String(i).padStart(tokenSet(v).pad, "0")}${W2_WAN(v, voice, i, final) ? "w2" : ""}.mp3`;
+};
+// ===== 词块库国内镜像(2026-11-25 付海东 / 家长「听算播不出来」):E 版整套同步在火山引擎 TOS(北京)上,
+// 国内(时区 / 中文系统)优先从 TOS 取、取不到再回 Netlify;海外反之。可用 localStorage listen:bankHost = tos | site 强制(调试用)。
+const TOS_BASE = "https://zhuxiang-tts.tos-cn-beijing.volces.com";
+const CN_TZ = new Set(["Asia/Shanghai", "Asia/Chongqing", "Asia/Harbin", "Asia/Urumqi", "Asia/Hong_Kong", "Asia/Macau", "Asia/Taipei", "PRC"]);
+function preferTos(): boolean {
+  try {
+    const o = localStorage.getItem("listen:bankHost");
+    if (o === "tos") return true;
+    if (o === "site") return false;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return CN_TZ.has(tz) || String(navigator.language || "").toLowerCase().startsWith("zh-cn");
+  } catch { return false; }
+}
+/** 一个词块按优先级排列的候选地址 */
+const bankUrls = (voice: BankVoice, tier: number, i: number, final = false): string[] => {
+  const rel = tierRel(voice, tier, i, final);
+  if (getBankVariant() !== "E") return [siteUrl(rel)];
+  const tos = TOS_BASE + rel, site = siteUrl(rel);
+  return preferTos() ? [tos, site] : [site, tos];
 };
 
 // ===== 数末词块(2026-10-24 用户「尾音掐得特别快…让它自然地呈现」)=====
@@ -239,11 +259,15 @@ function loadToken(voice: BankVoice, tier: number, tok: string, i: number, m: Ma
     // 2026-11-25 付海东「听算还是播不出来」:一道题十几个词块里任何一个网络抖动失败,整题就落到云端 / 浏览器语音(国内 Pad 上往往没声)。
     // 每块最多试 3 次(404 不重试),间隔 400ms / 800ms;只有真拿不到才算失败。
     let res: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 10_000); // 单个文件 10 秒没回就当失败重试,不让「准备中」卡死
-      try { res = await fetch(tierPath(voice, tier, i, final), { signal: ctl.signal }); } catch { res = null; } finally { clearTimeout(tm); }
-      if (res && (res.ok || res.status === 404)) break;
-      await new Promise((ok) => setTimeout(ok, 400 * (attempt + 1)));
+    // 候选地址依次试(国内先 TOS 再 Netlify,海外反之);每个地址最多 2 次,单次 10 秒超时;404 直接换下一个地址
+    for (const url of bankUrls(voice, tier, i, final)) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 10_000);
+        try { res = await fetch(url, { signal: ctl.signal }); } catch { res = null; } finally { clearTimeout(tm); }
+        if (res && (res.ok || res.status === 404)) break;
+        await new Promise((ok) => setTimeout(ok, 400 * (attempt + 1)));
+      }
+      if (res?.ok) break;
     }
     if (!res || !res.ok) {
       if (res?.status === 404 && final) finalMissing.add(k); // 线上还没有这一块 → 之后直接用普通块,不再每题重试
