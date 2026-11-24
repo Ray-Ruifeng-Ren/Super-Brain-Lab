@@ -236,9 +236,18 @@ function loadToken(voice: BankVoice, tier: number, tok: string, i: number, m: Ma
   const hit = inflightTok.get(k);
   if (hit) return hit;
   const p = (async () => {
-    const res = await fetch(tierPath(voice, tier, i, final));
-    if (!res.ok && final) finalMissing.add(k); // 线上还没有这一块 → 之后直接用普通块,不再每题重试
-    if (!res.ok) throw new Error(`bank ${voice}@${tier} t${i} http ${res.status}`);
+    // 2026-11-25 付海东「听算还是播不出来」:一道题十几个词块里任何一个网络抖动失败,整题就落到云端 / 浏览器语音(国内 Pad 上往往没声)。
+    // 每块最多试 3 次(404 不重试),间隔 400ms / 800ms;只有真拿不到才算失败。
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { res = await fetch(tierPath(voice, tier, i, final)); } catch { res = null; }
+      if (res && (res.ok || res.status === 404)) break;
+      await new Promise((ok) => setTimeout(ok, 400 * (attempt + 1)));
+    }
+    if (!res || !res.ok) {
+      if (res?.status === 404 && final) finalMissing.add(k); // 线上还没有这一块 → 之后直接用普通块,不再每题重试
+      throw new Error(`bank ${voice}@${tier} t${i} ${res ? "http " + res.status : "network"}`);
+    }
     const buf = await audioCtx().decodeAudioData(await res.arrayBuffer());
     const tp = trimPoints(buf, tier);
     // 数末块:文件已精确切在自然衰减之后,尾部不再按阈值裁(阈值会把衰减段裁掉);响度仍按主体段算,免得尾巴拉低 RMS 把增益抬高

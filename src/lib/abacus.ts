@@ -449,11 +449,15 @@ export function isExact(dividend: number, divisor: number): boolean { return div
 export const isEnough = isExact;
 /** 带约束的乘法出题:乘数各位只从 digits 里取(空=不限);carry 仅 2位×1位 生效。约束无解时退回普通出题。 */
 export function generateMultiplyWith(aDigits: number, bDigits: number, opts: MulOpts = {}): { a: number; b: number; answer: number } {
-  const set = (opts.digits ?? []).filter((d) => d >= 1 && d <= 9);
+  // 2026-11-25 付海东「第一题就是 278×1,乘 1 的还多」:特定乘数里勾了 1 时,1 位乘数会直接出 1(8590×1 没有练习意义,
+  // 普通出题早已排除)。1 位乘数从集合里去掉 1;集合只剩 1 就退回普通出题。多位乘数仍可含 1(如 213)。
+  const set0 = (opts.digits ?? []).filter((d) => d >= 1 && d <= 9);
+  const set = bDigits === 1 ? set0.filter((d) => d >= 2) : set0;
   const carry = aDigits === 2 && bDigits === 1 ? (opts.carry ?? "any") : "any";
   if (!set.length && carry === "any") return generateMultiply(aDigits, bDigits);
   for (let k = 0; k < 400; k++) {
     const b = set.length ? fromDigitSet(bDigits, set) : generateMultiply(aDigits, bDigits).b;
+    if (bDigits === 1 && b < 2) continue;
     const forbidden = aDigits + new Set(digitsOf(b)).size <= 10 ? new Set(digitsOf(b)) : new Set<number>(); // 两数合计不重复(总位数 ≤10)
     const a = genUniqueDigitNumber(aDigits, forbidden);
     if (a < Math.pow(10, aDigits - 1) && aDigits > 1) continue;
