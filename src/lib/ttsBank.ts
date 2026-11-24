@@ -240,7 +240,8 @@ function loadToken(voice: BankVoice, tier: number, tok: string, i: number, m: Ma
     // 每块最多试 3 次(404 不重试),间隔 400ms / 800ms;只有真拿不到才算失败。
     let res: Response | null = null;
     for (let attempt = 0; attempt < 3; attempt++) {
-      try { res = await fetch(tierPath(voice, tier, i, final)); } catch { res = null; }
+      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 10_000); // 单个文件 10 秒没回就当失败重试,不让「准备中」卡死
+      try { res = await fetch(tierPath(voice, tier, i, final), { signal: ctl.signal }); } catch { res = null; } finally { clearTimeout(tm); }
       if (res && (res.ok || res.status === 404)) break;
       await new Promise((ok) => setTimeout(ok, 400 * (attempt + 1)));
     }

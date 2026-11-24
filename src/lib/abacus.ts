@@ -248,52 +248,59 @@ export function buildAbacusProblem(cfg: AbacusCfg): Problem {
 
 // ============ 乘法 ============
 // 规则:乘数与被乘数合计数字不重复(位数和≤10);位数大时各自内部不重复。
-export function generateMultiply(aDigits: number, bDigits: number): { a: number; b: number; answer: number } {
-  const unique = aDigits + bDigits <= 10;
-  const fixLead = (arr: number[]) => {
-    if (arr[0] === 0) {
-      const j = arr.findIndex((x) => x !== 0);
-      if (j > 0) [arr[0], arr[j]] = [arr[j], arr[0]];
-      else return false;
+// 2026-11-25 用户「出题要均匀」:实数 / 法数(除法:除数 / 商)各自记 0–9 出现次数与首位次数,每一位都优先取出现最少的数字(同分随机),
+// 连续出题时 0–9 轮转均匀(与出题系统 exam/generate.ts 的 balancedDigits 同一思路);每题内部不重复、两数合计不重复的规则不变。
+// 计数按「配置」分开记(位数组合 + 特定数字 + 进位):1 位乘数永远不出 1,若和 2 位乘数共用计数,切到 2 位后 1 会被「补」成首位扎堆。
+interface Use { a: number[]; aLead: number[]; b: number[]; bLead: number[] }
+const USE_STORE = new Map<string, Use>();
+const useFor = (key: string): Use => {
+  let u = USE_STORE.get(key);
+  if (!u) { u = { a: Array(10).fill(0), aLead: Array(10).fill(0), b: Array(10).fill(0), bLead: Array(10).fill(0) }; USE_STORE.set(key, u); }
+  return u;
+};
+/** 均匀取一个 len 位数:数字只从 pool 里取、避开 forbidden、本数内不重复、首位非 0;1 位数 ≥ minOne。取不出返回 null。 */
+function balancedNumber(len: number, pool: number[], forbidden: Set<number>, minOne: number, use: number[], lead: number[]): number | null {
+  const used = new Set<number>();
+  const ds: number[] = [];
+  for (let i = 0; i < len; i++) {
+    const lo = i === 0 ? (len === 1 ? minOne : 1) : 0;
+    let cands = pool.filter((d) => d >= lo && !used.has(d) && !forbidden.has(d));
+    if (!cands.length) cands = pool.filter((d) => d >= lo && !used.has(d)); // 避不开就放宽「两数不重复」
+    if (!cands.length) return null;
+    let best: number[];
+    if (i === 0) {
+      // 首位:先按首位次数均衡(1–9 轮转),再在同分里挑总次数最少的 —— 否则 0 不能当首位,1 会被总次数「拉」去补首位
+      const minL = Math.min(...cands.map((d) => lead[d])); best = cands.filter((d) => lead[d] === minL);
+      const minU = Math.min(...best.map((d) => use[d])); best = best.filter((d) => use[d] <= minU + 1);
+    } else {
+      const minU = Math.min(...cands.map((d) => use[d])); best = cands.filter((d) => use[d] <= minU + 1);
     }
-    return true;
-  };
-  // 一位数的乘数/被乘数不出 0 和 1(2026-10-11 付海东:8590×1 没有练习意义)
-  const okOne = (v: number, d: number) => d !== 1 || v >= 2;
-  for (let k = 0; k < 300; k++) {
-    if (unique) {
-      const digs = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).slice(0, aDigits + bDigits);
-      const aArr = digs.slice(0, aDigits), bArr = digs.slice(aDigits);
-      if (!fixLead(aArr) || !fixLead(bArr)) continue;
-      const a = Number(aArr.join("")), b = Number(bArr.join(""));
-      if (!okOne(a, aDigits) || !okOne(b, bDigits)) continue;
-      return { a, b, answer: a * b };
-    }
-    const a = genUniqueDigitNumber(aDigits), b = genUniqueDigitNumber(bDigits);
-    if (!okOne(a, aDigits) || !okOne(b, bDigits)) continue;
-    return { a, b, answer: a * b };
+    const d = best[randInt(0, best.length - 1)];
+    used.add(d); ds.push(d);
   }
-  const a = aDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(aDigits);
-  const b = bDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(bDigits);
-  return { a, b, answer: a * b };
+  ds.forEach((d) => use[d]++); lead[ds[0]]++;
+  return Number(ds.join(""));
+}
+const ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+export function generateMultiply(aDigits: number, bDigits: number): { a: number; b: number; answer: number } {
+  return generateMultiplyWith(aDigits, bDigits);
 }
 
 // ============ 除法 ============
 // 规则:整除;除数与商数字不重复(位数和≤10)。指定除数位数 + 商位数,被除数自动推导。
+// 一位数的除数/商不出 0 和 1;商任何位数都不为 0(2026-10-11 付海东:曾出「0 ÷ 981」)
 export function generateDivide(divisorDigits: number, quotientDigits: number): { dividend: number; divisor: number; quotient: number } {
   const unique = divisorDigits + quotientDigits <= 10;
-  // 一位数的除数/商不出 0 和 1;商任何位数都不为 0(2026-10-11 付海东:曾出「0 ÷ 981」)
-  const okOne = (v: number, d: number) => (d === 1 ? v >= 2 : v >= Math.pow(10, d - 1));
-  for (let k = 0; k < 300; k++) {
-    const divisor = genUniqueDigitNumber(divisorDigits);
-    if (!okOne(divisor, divisorDigits)) continue;
-    const forbidden = unique ? new Set(digitsOf(divisor)) : new Set<number>();
-    const quotient = genUniqueDigitNumber(quotientDigits, forbidden);
-    if (!okOne(quotient, quotientDigits)) continue;
+  const U = useFor(`div ${divisorDigits}/${quotientDigits}`);
+  for (let k = 0; k < 60; k++) {
+    const divisor = balancedNumber(divisorDigits, ALL, new Set(), 2, U.a, U.aLead);
+    if (divisor == null) continue;
+    const quotient = balancedNumber(quotientDigits, ALL, unique ? new Set(digitsOf(divisor)) : new Set(), 2, U.b, U.bLead);
+    if (quotient == null) continue;
     return { dividend: divisor * quotient, divisor, quotient };
   }
   const divisor = divisorDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(divisorDigits);
-  const quotient = quotientDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(quotientDigits);
+  const quotient = quotientDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(quotientDigits, new Set(digitsOf(divisor)));
   return { dividend: divisor * quotient, divisor, quotient };
 }
 
@@ -447,25 +454,29 @@ export function carryPattern(a: number, b: number): Carry2 {
 export function isExact(dividend: number, divisor: number): boolean { return dividend % divisor === 0; }
 /** @deprecated 旧名,等于 isExact */
 export const isEnough = isExact;
-/** 带约束的乘法出题:乘数各位只从 digits 里取(空=不限);carry 仅 2位×1位 生效。约束无解时退回普通出题。 */
+/** 乘法出题(普通 / 特定乘数 / 进位组合统一入口):乘数各位只从 digits 里取(空=不限);carry 仅 2位×1位 生效。
+ *  实数、法数各自 0–9 均匀轮转;两数合计不重复(总位数 ≤10);1 位数不出 0 和 1(2026-10-11 付海东:8590×1 没有练习意义;
+ *  2026-11-25 「第一题就是 278×1」:特定乘数勾了 1 也一样不出 ×1)。 */
 export function generateMultiplyWith(aDigits: number, bDigits: number, opts: MulOpts = {}): { a: number; b: number; answer: number } {
-  // 2026-11-25 付海东「第一题就是 278×1,乘 1 的还多」:特定乘数里勾了 1 时,1 位乘数会直接出 1(8590×1 没有练习意义,
-  // 普通出题早已排除)。1 位乘数从集合里去掉 1;集合只剩 1 就退回普通出题。多位乘数仍可含 1(如 213)。
   const set0 = (opts.digits ?? []).filter((d) => d >= 1 && d <= 9);
   const set = bDigits === 1 ? set0.filter((d) => d >= 2) : set0;
+  const pool = set.length ? [...new Set(set)] : ALL;
   const carry = aDigits === 2 && bDigits === 1 ? (opts.carry ?? "any") : "any";
-  if (!set.length && carry === "any") return generateMultiply(aDigits, bDigits);
+  const unique = aDigits + bDigits <= 10;
+  const U = useFor(`mul ${aDigits}x${bDigits}|${pool.join("")}|${carry}`);
   for (let k = 0; k < 400; k++) {
-    const b = set.length ? fromDigitSet(bDigits, set) : generateMultiply(aDigits, bDigits).b;
-    if (bDigits === 1 && b < 2) continue;
-    const forbidden = aDigits + new Set(digitsOf(b)).size <= 10 ? new Set(digitsOf(b)) : new Set<number>(); // 两数合计不重复(总位数 ≤10)
-    const a = genUniqueDigitNumber(aDigits, forbidden);
-    if (a < Math.pow(10, aDigits - 1) && aDigits > 1) continue;
-    if (aDigits === 1 && a < 2) continue;
+    const b = pool.length >= bDigits
+      ? balancedNumber(bDigits, pool, new Set(), 2, U.b, U.bLead)
+      : fromDigitSet(bDigits, pool); // 指定数字比位数还少:允许重复(相邻位不同)
+    if (b == null || (bDigits === 1 && b < 2)) continue;
+    const a = balancedNumber(aDigits, ALL, unique ? new Set(digitsOf(b)) : new Set(), 2, U.a, U.aLead);
+    if (a == null) continue;
     if (carry !== "any" && carryPattern(a, b) !== carry) continue;
     return { a, b, answer: a * b };
   }
-  return generateMultiply(aDigits, bDigits);
+  const a = aDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(aDigits);
+  const b = bDigits === 1 ? 2 + randInt(0, 7) : genUniqueDigitNumber(bDigits, new Set(digitsOf(a)));
+  return { a, b, answer: a * b };
 }
 /** 带约束的除法出题:除数各位只从 digits 里取(空=不限);enough:yes/any=整除(any 维持旧行为,已布置的作业不受影响)、no=除不尽(带余数,quotient 为整数部分)。
  *  除不尽时 remainder ∈ [1, divisor−1],被除数 = 除数×商 + 余数;答案由上层按保留位数四舍五入。 */
