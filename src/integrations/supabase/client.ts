@@ -18,10 +18,20 @@ export const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABL
 
 // 开发环境演示数据(地址带 ?demo=1,本标签页内一直有效;生产构建不会走到这里)
 const DEMO = import.meta.env.DEV && typeof window !== "undefined" && (new URLSearchParams(window.location.search).has("demo") ? (sessionStorage.setItem("sbl:demo", new URLSearchParams(window.location.search).get("demo") === "student" ? "student" : "1"), true) : !!sessionStorage.getItem("sbl:demo"));
+// 2026-11-25 「登录加载等多个流程卡顿」:国内到 Netlify 代理的链路偶发长时间无响应,之前一个请求挂住整页就停在「加载中」。
+// 所有 Supabase 请求 20 秒没回就中止,让上层拿到错误、显示提示或重试,而不是永远转圈。
+const timedFetch: typeof fetch = (input, init) => {
+  const ctl = new AbortController();
+  const tm = setTimeout(() => ctl.abort(), 20_000);
+  const signal = init?.signal;
+  if (signal) signal.addEventListener("abort", () => ctl.abort(), { once: true });
+  return fetch(input, { ...init, signal: ctl.signal }).finally(() => clearTimeout(tm));
+};
 export const supabase = DEMO ? (createDemoClient() as unknown as ReturnType<typeof createClient<Database>>) : createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: { fetch: timedFetch },
 });

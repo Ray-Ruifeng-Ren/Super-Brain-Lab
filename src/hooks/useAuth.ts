@@ -36,11 +36,13 @@ export function useAuth(): AuthState & { refreshProfile: () => Promise<void> } {
     // Listener FIRST, then getSession (Supabase auth pattern).
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setState((s) => ({ ...s, session, user: session?.user ?? null }));
+      // 2026-11-25 付海东 / 学生「登录加载等多个流程卡顿」「闪了一下又变成加载中」:之前要等 profiles 查询回来才结束 loading,
+      // 国内到 Supabase 的链路一慢或一挂,整页就停在「加载中」。现在会话一确定就结束 loading,昵称等资料在后台补,拿不到也不挡路。
       if (session?.user) {
-        // Defer profile fetch to next tick to avoid deadlock.
+        setState((s) => ({ ...s, loading: false }));
         setTimeout(async () => {
-          const profile = await loadProfile(session.user.id);
-          setState((s) => ({ ...s, profile, loading: false }));
+          const profile = await loadProfile(session.user.id).catch(() => null);
+          setState((s) => ({ ...s, profile }));
         }, 0);
       } else {
         setState((s) => ({ ...s, profile: null, loading: false }));
@@ -49,17 +51,13 @@ export function useAuth(): AuthState & { refreshProfile: () => Promise<void> } {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) {
-        const profile = await loadProfile(data.session.user.id);
-        setState({
-          session: data.session,
-          user: data.session.user,
-          profile,
-          loading: false,
-        });
+        setState((s) => ({ ...s, session: data.session, user: data.session!.user, loading: false }));
+        const profile = await loadProfile(data.session.user.id).catch(() => null);
+        setState((s) => ({ ...s, profile }));
       } else {
         setState((s) => ({ ...s, loading: false }));
       }
-    });
+    }).catch(() => setState((s) => ({ ...s, loading: false })));
 
     return () => sub.subscription.unsubscribe();
   }, []);
