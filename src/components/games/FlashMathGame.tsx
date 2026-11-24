@@ -120,11 +120,14 @@ const paceFor = (listenSpeed: number): TtsPace => (listenSpeed <= 3 ? "slow" : l
 // fast 档仅保留「吐字利落、数字间留停顿」的措辞 —— 源头更干净,高倍速压缩后不粘连。
 const PACE_FACTOR: Record<TtsPace, number> = { slow: 1.0, normal: 1.0, fast: 1.0 };
 async function fetchTTS(text: string, lang: "zh" | "en", voiceType: "female" | "male" | "child", pace: TtsPace): Promise<string> {
+  // 2026-11-25 付海东截图「正在准备语音…」一直转:云端合成没有超时,国内链路挂住就永远不回。25 秒没回就当失败,落到浏览器语音。
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 25_000);
   const res = await fetch(siteUrl("/.netlify/functions/tts"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ text, lang, voiceType, pace }),
-  });
+    signal: ctl.signal,
+  }).finally(() => clearTimeout(tm));
   if (!res.ok) throw new Error("tts-unavailable");
   const blob = await res.blob();
   if (!blob.size) throw new Error("tts-empty");
@@ -655,6 +658,10 @@ export function FlashMathGame({
   const ttsPendingRef = useRef<{ key: string; promise: Promise<string> } | null>(null);  // 正在合成的请求(去重,支持预取)
   const [ttsFallback, setTtsFallback] = useState(false); // 云端 TTS 不可用时,提示已回退到浏览器语音
   const [preparing, setPreparing] = useState(false);      // 听算:语音合成中(准备好再播),前端显示"准备中"
+  // 「准备中」超过 12 秒就露出逃生口:先用浏览器语音播这道题(2026-11-25 国内网络慢时不让学生干等)
+  const [prepLong, setPrepLong] = useState(false);
+  useEffect(() => { if (!preparing) { setPrepLong(false); return; } const t = window.setTimeout(() => setPrepLong(true), 12_000); return () => window.clearTimeout(t); }, [preparing]);
+  const forceWebRef = useRef<() => void>(() => {});
 
   // ── 挑战TA:从榜单点"挑战"→ 弹窗确认 → 用TA配置单局挑战 → 成功/失败 ──
   const [challengeInfo, setChallengeInfo] = useState<{ nickname: string; targetD: number; targetCfg: FlashCfg } | null>(null);
@@ -1297,6 +1304,8 @@ export function FlashMathGame({
     // 库还在下载(刚换速度档/音色)就【等它】(约1MB,秒级),绝不抢跑掉进云端:
     // 云端合成 15 笔多位数的长题要好几秒(付海东「一直出不来」),播放还被限速(「又慢了」)。
     let bankHandle: { cancel: () => void } | null = null;
+    let escaped = false; // 用户点了「先用浏览器语音」:之后到达的词块 / 云端结果都作废
+    forceWebRef.current = () => { if (cancelled || escaped) return; escaped = true; bankHandle?.cancel(); setPreparing(false); setTtsFallback(true); void webSpeech(); };
     const tier = tierFor(ttsSpeedFor(cfg.listenSpeed) / voicePlaybackRate(cfg.listenVoice as BankVoice));
     const buildTermTokens = (): string[][] | null => tokensFor(problem);
     const bankTokens = cfg.listenLang === "zh" ? buildTermTokens() : null;
@@ -1316,7 +1325,7 @@ export function FlashMathGame({
       try {
         setPreparing(true); // 语音合成中 → 前端显示"准备中",就绪后再播(避免开头空白/像没报全)
         const url = await warmTTS(buildListenText(problem, cfg), cfg.listenLang, cfg.listenVoice, paceFor(cfg.listenSpeed)); // 命中预取则立即返回
-        if (cancelled) return;
+        if (cancelled || escaped) return;
         setPreparing(false);
         setTtsFallback(false);
         // 每题新建独立音频元素(warmTTS 已把整段 blob 下载完,可完整从头播放)
@@ -1351,7 +1360,7 @@ export function FlashMathGame({
           })();
         }
       } catch {
-        if (!cancelled) { setPreparing(false); setTtsFallback(true); await webSpeech(); } // 云端不可用 → 浏览器语音兜底
+        if (!cancelled && !escaped) { setPreparing(false); setTtsFallback(true); await webSpeech(); } // 云端不可用 → 浏览器语音兜底
       }
     };
 
@@ -1375,7 +1384,7 @@ export function FlashMathGame({
       else {
         setPreparing(true); // 词块下载中("准备中"一闪而过);真失败才落云端
         void loadBank(cfg.listenVoice as BankVoice, tier, needed).then((ok) => {
-          if (cancelled) return;
+          if (cancelled || escaped) return;
           if (ok) { playBank(bankTokens); prefetchNextBank(); }
           else void cloudPath();
         });
@@ -1551,9 +1560,14 @@ export function FlashMathGame({
         </div>
         <div>
           <p className="text-lg font-semibold text-foreground">{T("正在准备语音…", "Preparing audio…")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{T("合成好整段题目后再开始播报,确保从第一个数完整听到", "The whole problem is generated before playback, so you hear it from the very first number")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{prepLong ? T("网络较慢,语音还在下载…", "Slow network, audio still downloading…") : T("合成好整段题目后再开始播报,确保从第一个数完整听到", "The whole problem is generated before playback, so you hear it from the very first number")}</p>
         </div>
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        {prepLong && (
+          <button type="button" onClick={() => forceWebRef.current()} className="rounded-full border border-border bg-background/80 px-4 py-1.5 text-sm text-foreground hover:bg-muted">
+            {T("先用浏览器语音播报这道题", "Play this one with the browser voice")}
+          </button>
+        )}
       </div>
     );
   }
