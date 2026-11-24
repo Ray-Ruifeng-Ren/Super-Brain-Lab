@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { Play, RotateCcw, Minus, Plus, Volume2, ArrowLeft, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
@@ -8,10 +9,24 @@ import { logAttempt, fetchWrongAttempts } from "@/lib/practiceLog";
 import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
 import type { Sign } from "@/lib/flashMath";
 import Soroban from "./Soroban";
+import { dingTick, dingGo } from "@/lib/beep";
 import {
   buildRound, previewScore, computeScore, abacusMode, numberToCN, PROJECTS,
   DEFAULT_ABACUS_CFG, type AbacusCfg, type AbacusMode, type AddSubType, type Project, type Round,
 } from "@/lib/abacus";
+import { getMyCert, bestBadge, type CertLevel } from "@/lib/cert";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;子组件随 AbacusGame(订阅语言上下文)重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
+const PROJECT_EN: Record<Project, { label: string; desc: string }> = {
+  addsub: { label: "Add & Subtract", desc: "Flash / Glance / Listen" },
+  multiply: { label: "Multiply", desc: "Pick your digits" },
+  divide: { label: "Divide", desc: "Pick your digits" },
+  bead: { label: "Beads", desc: "Read the abacus" },
+};
+const projLabelOf = (id: Project) => (getLang() === "en" ? PROJECT_EN[id].label : PROJECTS.find((p) => p.id === id)?.label ?? "");
 
 // ============ 童趣配色 ============
 const T = {
@@ -37,19 +52,19 @@ type Phase = "ready" | "playing" | "answer" | "result";
 const CFG_KEY = "abacus:lastCfg";
 const COUNT_PRESETS = [5, 10, 15, 20, 30];
 const SPEED_PRESETS = [
-  { label: "0.1秒", value: 100 }, { label: "0.3秒", value: 300 },
-  { label: "0.5秒", value: 500 }, { label: "1秒", value: 1000 }, { label: "1.5秒", value: 1500 },
+  { label: "0.1秒", en: "0.1s", value: 100 }, { label: "0.3秒", en: "0.3s", value: 300 },
+  { label: "0.5秒", en: "0.5s", value: 500 }, { label: "1秒", en: "1s", value: 1000 }, { label: "1.5秒", en: "1.5s", value: 1500 },
 ];
 const LISTEN_PRESETS = [
-  { label: "常规语速", value: 1 }, { label: "较快语速", value: 2 }, { label: "极快语速", value: 3 },
+  { label: "常规语速", en: "Normal", value: 1 }, { label: "较快语速", en: "Fast", value: 2 }, { label: "极快语速", en: "Very fast", value: 3 },
 ];
-const ADDSUB_OPTIONS: { id: AddSubType; label: string }[] = [
-  { id: "add", label: "纯加" }, { id: "sub", label: "纯减" }, { id: "mix", label: "加减混合" },
+const ADDSUB_OPTIONS: { id: AddSubType; label: string; en: string }[] = [
+  { id: "add", label: "纯加", en: "Add only" }, { id: "sub", label: "纯减", en: "Subtract only" }, { id: "mix", label: "加减混合", en: "Mixed" },
 ];
-const MODES: { id: AbacusMode; label: string; sub: string; emoji: string; c: string; cD: string }[] = [
-  { id: "flash", label: "闪算", sub: "逐笔闪现", emoji: "⚡", c: T.sun, cD: T.sunD },
-  { id: "glance", label: "看算", sub: "竖式同现", emoji: "👀", c: T.grass, cD: T.grassD },
-  { id: "listen", label: "听算", sub: "语音报数", emoji: "🔊", c: T.sky, cD: T.skyD },
+const MODES: { id: AbacusMode; label: string; en: string; sub: string; emoji: string; c: string; cD: string }[] = [
+  { id: "flash", label: "闪算", en: "Flash", sub: "逐笔闪现", emoji: "⚡", c: T.sun, cD: T.sunD },
+  { id: "glance", label: "看算", en: "Glance", sub: "竖式同现", emoji: "👀", c: T.grass, cD: T.grassD },
+  { id: "listen", label: "听算", en: "Listen", sub: "语音报数", emoji: "🔊", c: T.sky, cD: T.skyD },
 ];
 const PROJ_COLOR: Record<Project, { c: string; cD: string }> = {
   addsub: { c: T.coral, cD: T.coralD }, multiply: { c: T.sky, cD: T.skyD },
@@ -102,9 +117,13 @@ export interface AbacusGameProps {
   onMistakeModeChange?: (v: boolean) => void;
   /** Deep-link entry: preselect an add/sub mode and open its config (from a homepage card). */
   initialMode?: AbacusMode;
+  /** Deep-link entry: preselect a project (乘法/除法/看珠) and open its config directly. */
+  initialProject?: Project;
 }
 
-export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange, initialMode }: AbacusGameProps) {
+export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode = false, onMistakeModeChange, initialMode, initialProject }: AbacusGameProps) {
+  const navigate = useNavigate();
+  useI18n(); // 订阅语言:切换中英文时整棵子树重渲染(子组件文案用 L())
   const [cfg, setCfg] = useState<AbacusCfg>(loadStoredCfg);
   const [view, setView] = useState<"home" | "train">("home");
   const [showMore, setShowMore] = useState(false);
@@ -118,19 +137,32 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
   const [countdown, setCountdown] = useState(3);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usedMistakeKeysRef = useRef<Set<string>>(new Set());
+  const submitBusyRef = useRef(false); // 提交防重入锁
+  const [certBadge, setCertBadge] = useState<CertLevel | null>(null); // 等级鉴定最高徽章(首页横幅展示)
+
+  useEffect(() => {
+    let on = true;
+    getMyCert().then((m) => on && setCertBadge(bestBadge(new Set(m.keys()))));
+    return () => { on = false; };
+  }, []);
 
   // Deep-link from a homepage card (/play/abacus?mode=listen|glance): jump
   // straight into add/sub with that mode preselected and its config open.
   useEffect(() => {
-    if (!initialMode) return;
-    setCfg((c) => ({ ...c, project: "addsub", mode: initialMode }));
-    setModalProject("addsub");
+    if (initialProject) {
+      setCfg((c) => ({ ...c, project: initialProject }));
+      setModalProject(initialProject);
+    } else if (initialMode) {
+      setCfg((c) => ({ ...c, project: "addsub", mode: initialMode }));
+      setModalProject("addsub");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch { /* noop */ } }, [cfg]);
   useEffect(() => { onCfgChange?.(cfg); }, [cfg, onCfgChange]);
   useEffect(() => { onViewChange?.(view); }, [view, onViewChange]);
+  useEffect(() => { if (phase === "answer") submitBusyRef.current = false; }, [phase]); // 每题作答阶段放行一次提交
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); window.speechSynthesis?.cancel(); }, []);
 
   const set = (patch: Partial<AbacusCfg>) => setCfg((c) => ({ ...c, ...patch }));
@@ -155,24 +187,25 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
   async function beginRound() {
     usedMistakeKeysRef.current.clear();
     const r = await loadRound();
-    if (!r) { toast({ title: "还没有错题哦", description: "先做几题、或关掉「只练错题」～" }); return; }
+    if (!r) { toast({ title: L("还没有错题哦", "No mistakes yet"), description: L("先做几题、或关掉「只练错题」～", "Do a few problems first, or turn off “Mistakes only”.") }); return; }
     usedMistakeKeysRef.current.add(problemKey(r));
     setRound(r); setInput(""); setResult(null); setStepIdx(0); setShowTerm(false); setCountdown(3); setPhase("ready");
   }
 
   function openProject(p: Project) { set({ project: p }); setModalProject(p); }
   function startFromModal() { setModalProject(null); setView("train"); beginRound(); }
-  function backHome() { if (timerRef.current) clearTimeout(timerRef.current); window.speechSynthesis?.cancel(); setView("home"); setRound(null); setPhase("ready"); }
+  function backHome() { if (timerRef.current) clearTimeout(timerRef.current); window.speechSynthesis?.cancel(); navigate("/"); }
 
   const timedReveal = !!round && ((round.project === "addsub" && (cfg.mode === "flash" || cfg.mode === "listen")) || round.project === "bead");
   const flashBatch = Math.max(1, cfg.flashBatch);
   const flashSteps = round?.terms ? Math.ceil(round.terms.length / flashBatch) : 0;
 
-  // 倒计时
+  // 倒计时 3-2-1(每个数字一声「叮」,开始时「叮～」)
   useEffect(() => {
     if (view !== "train" || phase !== "ready") return;
-    if (countdown <= 0) { setPhase(timedReveal ? "playing" : "answer"); return; }
-    timerRef.current = setTimeout(() => setCountdown((n) => n - 1), 600);
+    if (countdown <= 0) { dingGo(); setPhase(timedReveal ? "playing" : "answer"); return; }
+    dingTick();
+    timerRef.current = setTimeout(() => setCountdown((n) => n - 1), 700);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [view, phase, countdown, timedReveal]);
 
@@ -216,6 +249,9 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
     if (!round) return;
     const parsed = parseSpokenNumber(raw);
     if (parsed === null) return;
+    // 防重入:长按 Enter/连点提交会在 await 期间并发多次 submit(成绩重复入库);进入下一题作答时解锁
+    if (submitBusyRef.current) return;
+    submitBusyRef.current = true;
     const correct = parsed === round.answer;
     const score = computeScore(cfg, correct);
     const mode = abacusMode(cfg);
@@ -224,7 +260,7 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
     await logAttempt({ game: "abacus", mode, terms, signs, answer: round.answer, userAnswer: parsed, correct, usedMs: 0 });
     if (correct) {
       const r = await submitScore({ game: "abacus", mode, value: score, meta: { project: cfg.project } });
-      if (!r.ok && r.error === "未登录") toast({ title: "登录后就能上榜啦", description: "这局成绩还没存到云端～" });
+      if (!r.ok && r.error === "未登录") toast({ title: L("登录后就能上榜啦", "Log in to get on the leaderboard"), description: L("这局成绩还没存到云端～", "This score wasn't saved to the cloud.") });
     }
     onFinished?.();
     setResult({ correct, score, answered: parsed });
@@ -238,24 +274,53 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
 
   // ================= HOME =================
   if (view === "home") {
-    const MODE_CARDS: { mode: AbacusMode; img: string; label: string }[] = [
-      { mode: "flash", img: "/card-flash.png", label: "闪电心算" },
-      { mode: "glance", img: "/card-kan.png", label: "看算" },
-      { mode: "listen", img: "/card-ting.png", label: "听算" },
+    const MODE_CARDS: { mode: AbacusMode; img: string; label: string; to?: string }[] = [
+      { mode: "flash", img: "/card-flash.png", label: L("闪电心算", "Flash Math"), to: "/play/flashmath" },
+      { mode: "glance", img: "/card-kan.png", label: L("看算", "Glance") },
+      { mode: "listen", img: "/card-ting.png", label: L("听算", "Listen") },
     ];
-    const openModeCard = (mode: AbacusMode) => { set({ project: "addsub", mode }); setModalProject("addsub"); };
+    const onModeCard = (c: { mode: AbacusMode; to?: string }) => {
+      if (c.to) { navigate(c.to); return; }
+      set({ project: "addsub", mode: c.mode });
+      setModalProject("addsub");
+    };
     const MORE: { id: Project; label: string; emoji: string }[] = [
-      { id: "multiply", label: "乘法", emoji: "✖️" }, { id: "divide", label: "除法", emoji: "➗" }, { id: "bead", label: "看珠", emoji: "🧮" },
+      { id: "multiply", label: projLabelOf("multiply"), emoji: "✖️" }, { id: "divide", label: projLabelOf("divide"), emoji: "➗" }, { id: "bead", label: projLabelOf("bead"), emoji: "🧮" },
     ];
     return (
       <>
         <div style={{ padding: "6px 2px 20px", minHeight: 420 }}>
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ display: "inline-block", padding: "6px 18px", borderRadius: 999, background: "rgba(255,255,255,.72)", boxShadow: "0 3px 10px rgba(0,0,0,.08)", fontSize: 16, fontWeight: 900, color: T.coralD }}>🧮 选择训练项目</div>
+            <div style={{ display: "inline-block", padding: "6px 18px", borderRadius: 999, background: "rgba(255,255,255,.72)", boxShadow: "0 3px 10px rgba(0,0,0,.08)", fontSize: 16, fontWeight: 900, color: T.coralD }}>🧮 {L("选择训练项目", "Choose a project")}</div>
           </div>
+          {/* 锦标赛(等级鉴定)入口 —— 三张卡上方的横幅 */}
+          <button onClick={() => navigate("/cert")} aria-label={L("闪电心算等级鉴定", "Flash Math certification")}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 16,
+              border: "none", cursor: "pointer", borderRadius: 20, padding: "14px 20px", textAlign: "left",
+              background: "linear-gradient(92deg, #FFB01F, #F59300 55%, #EF5C2B)", color: "#fff",
+              boxShadow: "0 10px 24px rgba(245,147,0,.38), inset 0 2px 0 rgba(255,255,255,.45)", transition: "transform .08s",
+            }}
+            onMouseDown={(e) => (e.currentTarget.style.transform = "scale(.99)")}
+            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}>
+            <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 32 }}>🏆</span>
+              <span>
+                <span style={{ display: "block", fontSize: 18, fontWeight: 900 }}>{L("等级鉴定 · 锦标赛", "Certification · Championship")}</span>
+                <span style={{ display: "block", fontSize: 11.5, opacity: 0.92, fontWeight: 600 }}>{L("世界级别开创性等级鉴定标准,有资格申请吉尼斯世界纪录 · 二十级到二十段", "A pioneering world-class grading standard, eligible for Guinness World Records · 20 levels to 20 dan")}</span>
+              </span>
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {certBadge && (
+                <span style={{ padding: "4px 12px", borderRadius: 999, background: "rgba(255,255,255,.24)", fontSize: 13, fontWeight: 900 }}>⚡{certBadge.label}</span>
+              )}
+              <span style={{ padding: "7px 16px", borderRadius: 999, background: "rgba(255,255,255,.92)", color: T.sunD, fontSize: 13, fontWeight: 900 }}>{certBadge ? L("继续刷级 →", "Keep leveling →") : L("开始鉴定 →", "Get certified →")}</span>
+            </span>
+          </button>
           <div className="grid gap-4 md:grid-cols-3">
             {MODE_CARDS.map((c) => (
-              <button key={c.mode} onClick={() => openModeCard(c.mode)} aria-label={c.label}
+              <button key={c.mode} onClick={() => onModeCard(c)} aria-label={c.label}
                 style={{ border: "none", background: "none", padding: 0, cursor: "pointer", borderRadius: 20, overflow: "hidden", boxShadow: "0 12px 26px rgba(0,0,0,.20)", transition: "transform .08s" }}
                 onMouseDown={(e) => (e.currentTarget.style.transform = "scale(.98)")}
                 onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -267,14 +332,14 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
           <div style={{ marginTop: 18, textAlign: "center" }}>
             <button onClick={() => setShowMore((s) => !s)}
               style={{ background: "rgba(255,255,255,.82)", border: `2px solid ${T.line}`, borderRadius: 999, padding: "9px 22px", fontSize: 14, fontWeight: 800, color: T.ink, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,.10)" }}>
-              {showMore ? "收起 ▴" : "更多项目 ▾"}
+              {showMore ? L("收起 ▴", "Less ▴") : L("更多项目 ▾", "More projects ▾")}
             </button>
           </div>
           {showMore && (
             <div className="grid gap-3 md:grid-cols-3" style={{ marginTop: 14 }}>
               {MORE.map((m) => {
                 const col = PROJ_COLOR[m.id];
-                const desc = PROJECTS.find((p) => p.id === m.id)?.desc ?? "";
+                const desc = getLang() === "en" ? PROJECT_EN[m.id].desc : PROJECTS.find((p) => p.id === m.id)?.desc ?? "";
                 return (
                   <button key={m.id} onClick={() => openProject(m.id)}
                     className="animate-pop-in"
@@ -290,18 +355,18 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
             </div>
           )}
         </div>
-        {modalProject && <ParamModal cfg={cfg} set={set} project={modalProject} onCancel={() => setModalProject(null)} onStart={startFromModal} mistakeMode={mistakeMode} onMistakeModeChange={onMistakeModeChange} />}
+        {modalProject && <ParamModal cfg={cfg} set={set} project={modalProject} onCancel={() => navigate("/")} onStart={startFromModal} mistakeMode={mistakeMode} onMistakeModeChange={onMistakeModeChange} />}
       </>
     );
   }
 
   // ================= TRAIN =================
-  const projLabel = PROJECTS.find((p) => p.id === cfg.project)?.label ?? "训练";
+  const projLabel = projLabelOf(cfg.project) || L("训练", "Training");
   return (
     <div style={shell}>
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <button onClick={backHome} style={{ display: "inline-flex", alignItems: "center", gap: 4, color: T.coralD, fontWeight: 800, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
-          <ArrowLeft className="h-4 w-4" /> 返回项目
+          <ArrowLeft className="h-4 w-4" /> {L("返回项目", "Projects")}
         </button>
         <span style={{ fontSize: 15, fontWeight: 900, color: T.ink }}>{projLabel}</span>
         <span style={{ width: 64 }} />
@@ -309,10 +374,11 @@ export function AbacusGame({ onFinished, onCfgChange, onViewChange, mistakeMode 
 
       {phase === "ready" && (
         <div style={{ minHeight: 300 }} className="flex flex-col items-center justify-center">
-          <div className="animate-bounce" style={{ fontSize: 60 }}>🧮</div>
-          <div key={countdown} className="animate-pop-in" style={{ fontSize: 54, fontWeight: 900, color: T.coralD, marginTop: 6 }}>准备好啦！</div>
+          <div className="animate-bounce" style={{ fontSize: 54 }}>🧮</div>
+          <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 800, letterSpacing: "0.2em", marginTop: 4 }}>{L("准备", "Ready")}</div>
+          <div key={countdown} className="animate-pop-in font-mono-tabular" style={{ fontSize: 88, fontWeight: 900, color: T.coralD, lineHeight: 1.05 }}>{countdown > 0 ? countdown : L("开始", "Go")}</div>
           <div style={{ fontSize: 14, color: T.inkSoft, fontWeight: 700, marginTop: 6 }}>
-            {cfg.project === "listen" || (cfg.project === "addsub" && cfg.mode === "listen") ? "🔊 打开声音,用心听～" : "👀 盯住屏幕中间～"}
+            {cfg.project === "addsub" && cfg.mode === "listen" ? L("🔊 打开声音,用心听～", "🔊 Turn on sound and listen closely") : L("👀 盯住屏幕中间～", "👀 Watch the center of the screen")}
           </div>
         </div>
       )}
@@ -339,7 +405,7 @@ function PlayView({ round, cfg, stepIdx, showTerm, flashBatch, flashSteps, onGiv
   if (round.project === "bead") {
     return (
       <div className="flex flex-col gap-2">
-        <TopBar left="看珠记数" onGiveUp={onGiveUp} />
+        <TopBar left={L("看珠记数", "Read the beads")} onGiveUp={onGiveUp} />
         <div className="flex flex-col items-center justify-center" style={{ height: 300, borderRadius: 22, background: "#fff", border: `2px solid ${T.line}` }}>
           {showTerm && round.beadValue != null && <Soroban value={round.beadValue} digits={round.beadDigits} />}
         </div>
@@ -358,7 +424,7 @@ function PlayView({ round, cfg, stepIdx, showTerm, flashBatch, flashSteps, onGiv
   const iconCls = flashBatch <= 1 ? "h-12 w-12" : flashBatch === 2 ? "h-10 w-10" : "h-7 w-7";
   return (
     <div className="flex flex-col gap-2">
-      <TopBar left={`第 ${shownCount} / ${len} 笔`} right={isFlash ? `${cfg.speedMs}ms${flashBatch > 1 ? ` ×${flashBatch}` : ""}` : "🔊 听算"} onGiveUp={onGiveUp} />
+      <TopBar left={L(`第 ${shownCount} / ${len} 笔`, `Term ${shownCount} / ${len}`)} right={isFlash ? `${cfg.speedMs}ms${flashBatch > 1 ? ` ×${flashBatch}` : ""}` : L("🔊 听算", "🔊 Listen")} onGiveUp={onGiveUp} />
       <div style={{ height: 8, background: "#F0E2C4", borderRadius: 999, overflow: "hidden", marginBottom: 4 }}>
         <div style={{ height: "100%", width: `${(curStep / totalSteps) * 100}%`, background: `linear-gradient(90deg, ${T.sun}, ${T.coral})`, borderRadius: 999, transition: "width .2s" }} />
       </div>
@@ -370,7 +436,7 @@ function PlayView({ round, cfg, stepIdx, showTerm, flashBatch, flashSteps, onGiv
                 const gi = batchStart + k; const minus = round.signs![gi] === "-";
                 return (
                   <div key={gi} className="flex items-center gap-1.5">
-                    {minus ? <Minus className={iconCls} strokeWidth={4} style={{ color: T.coral }} /> : <Plus className={iconCls} strokeWidth={4} style={{ color: "#7CE38B" }} />}
+                    {minus && <Minus className={iconCls} strokeWidth={4} style={{ color: "#fff" }} />}
                     <span className={cn(numCls, "font-mono-tabular")} style={{ color: "#fff", fontWeight: 800 }}>{val}</span>
                   </div>
                 );
@@ -381,7 +447,7 @@ function PlayView({ round, cfg, stepIdx, showTerm, flashBatch, flashSteps, onGiv
       ) : (
         <div className="flex flex-col items-center justify-center" style={{ height: 300, borderRadius: 22, background: `linear-gradient(180deg, ${T.sky}, ${T.skyD})` }}>
           <div className={cn(showTerm && "animate-bounce")} style={{ fontSize: 78 }}>🔊</div>
-          <p style={{ color: "#fff", fontWeight: 800, marginTop: 16, fontSize: 15 }}>正在报第 {shownCount} / {len} 笔,用心算～</p>
+          <p style={{ color: "#fff", fontWeight: 800, marginTop: 16, fontSize: 15 }}>{L(`正在报第 ${shownCount} / ${len} 笔,用心算～`, `Reading term ${shownCount} / ${len}, compute in your head`)}</p>
         </div>
       )}
     </div>
@@ -393,7 +459,7 @@ function TopBar({ left, right, onGiveUp }: { left: string; right?: string; onGiv
     <div className="flex items-center justify-between" style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 800 }}>
       <span>{left}</span>
       {right && <span>{right}</span>}
-      <button onClick={onGiveUp} style={{ color: T.coralD, fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>放弃</button>
+      <button onClick={onGiveUp} style={{ color: T.coralD, fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>{L("放弃", "Give up")}</button>
     </div>
   );
 }
@@ -410,7 +476,7 @@ function AnswerPrompt({ round, mode }: { round: Round; mode: AbacusMode }) {
             <div className="flex flex-col items-end gap-0.5 font-mono-tabular" style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>
               {round.terms.map((t, i) => (
                 <div key={i}>
-                  <span style={{ marginRight: 12, color: round.signs![i] === "-" ? T.coralD : T.grassD }}>{round.signs![i] === "-" ? "−" : "+"}</span>{t}
+                  <span style={{ display: "inline-block", width: "0.7em", marginRight: 12, textAlign: "center" }}>{round.signs![i] === "-" ? "-" : ""}</span>{t}
                 </div>
               ))}
               <div style={{ marginTop: 6, height: 4, width: "60%", background: T.ink, borderRadius: 4 }} />
@@ -418,7 +484,7 @@ function AnswerPrompt({ round, mode }: { round: Round; mode: AbacusMode }) {
           </div>
         )}
         <div style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: T.coralD }}>
-          {showStack ? "🤔 答案是多少?" : "🤔 都记住了吗?填答案～"}
+          {showStack ? L("🤔 答案是多少?", "🤔 What's the answer?") : L("🤔 都记住了吗?填答案～", "🤔 Remember them all? Enter the answer")}
         </div>
       </>
     );
@@ -434,7 +500,7 @@ function AnswerPrompt({ round, mode }: { round: Round; mode: AbacusMode }) {
     );
   }
   // bead
-  return <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: T.coralD }}>🤔 刚才的算盘是几?</div>;
+  return <div style={{ textAlign: "center", fontSize: 16, fontWeight: 800, color: T.coralD }}>{L("🤔 刚才的算盘是几?", "🤔 What number was on the abacus?")}</div>;
 }
 
 // ---------- 结果 ----------
@@ -452,17 +518,17 @@ function ResultView({ round, result, onAgain, onHome }: {
         </div>
       )}
       <div style={{ fontSize: 64, marginTop: 4 }} className="animate-pop-in">{ok ? "🎉" : "💪"}</div>
-      <div style={{ fontSize: 22, fontWeight: 900, color: ok ? T.grassD : T.coralD }}>{ok ? "答对啦！太棒了" : "差一点点,再试试～"}</div>
-      <div style={{ fontSize: 42, fontWeight: 900, color: ok ? T.sunD : T.inkSoft }} className="font-mono-tabular">{ok ? `+${result.score}` : "0"} <span style={{ fontSize: 16 }}>分</span></div>
+      <div style={{ fontSize: 22, fontWeight: 900, color: ok ? T.grassD : T.coralD }}>{ok ? L("答对啦！太棒了", "Correct! Great job") : L("差一点点,再试试～", "So close, try again")}</div>
+      <div style={{ fontSize: 42, fontWeight: 900, color: ok ? T.sunD : T.inkSoft }} className="font-mono-tabular">{ok ? `+${result.score}` : "0"} <span style={{ fontSize: 16 }}>{L("分", "pts")}</span></div>
       <div style={{ background: "#fff", border: `2px solid ${T.line}`, borderRadius: 18, padding: 16, width: "100%", maxWidth: 420, textAlign: "center" }}>
         <div className="flex items-center justify-center gap-8">
           <div>
-            <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>正确答案</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>{L("正确答案", "Correct answer")}</div>
             <div className="font-mono-tabular" style={{ fontSize: 26, fontWeight: 900, color: T.grassD }}>{round.answer}</div>
           </div>
           {!ok && (
             <div>
-              <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>你的答案</div>
+              <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>{L("你的答案", "Your answer")}</div>
               <div className="font-mono-tabular" style={{ fontSize: 26, fontWeight: 900, color: T.coralD }}>{result.answered ?? "—"}</div>
             </div>
           )}
@@ -470,9 +536,9 @@ function ResultView({ round, result, onAgain, onHome }: {
         <div className="font-mono-tabular" style={{ marginTop: 12, fontSize: 14, color: T.inkSoft, wordBreak: "break-word" }}>{round.exprStr} = {round.answer}</div>
       </div>
       <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
-        <button onClick={onHome} style={{ background: "#fff", color: T.ink, border: `2px solid ${T.line}`, borderRadius: 999, padding: "11px 22px", fontWeight: 800, cursor: "pointer" }}>返回项目</button>
+        <button onClick={onHome} style={{ background: "#fff", color: T.ink, border: `2px solid ${T.line}`, borderRadius: 999, padding: "11px 22px", fontWeight: 800, cursor: "pointer" }}>{L("返回项目", "Projects")}</button>
         <button onClick={onAgain} style={{ ...candyBtn(T.grass, T.grassD), padding: "11px 26px", fontSize: 16, display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <RotateCcw className="h-4 w-4" /> 再来一题
+          <RotateCcw className="h-4 w-4" /> {L("再来一题", "Next one")}
         </button>
       </div>
     </div>
@@ -484,32 +550,32 @@ function ParamModal({ cfg, set, project, onCancel, onStart, mistakeMode, onMista
   cfg: AbacusCfg; set: (p: Partial<AbacusCfg>) => void; project: Project; onCancel: () => void; onStart: () => void;
   mistakeMode: boolean; onMistakeModeChange?: (v: boolean) => void;
 }) {
-  const label = PROJECTS.find((p) => p.id === project)?.label ?? "";
+  const label = projLabelOf(project);
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(40,30,20,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", background: `radial-gradient(120% 100% at 50% 0%, #FFFDF7, ${T.cream})`, border: `2px solid ${T.line}`, borderRadius: 24, boxShadow: "0 20px 50px rgba(0,0,0,.3)", padding: 20 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 19, fontWeight: 900, color: T.coralD }}>{label} · 参数设置</div>
+          <div style={{ fontSize: 19, fontWeight: 900, color: T.coralD }}>{label} · {L("参数设置", "Settings")}</div>
           <button onClick={onCancel} style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft }}><X className="h-5 w-5" /></button>
         </div>
 
         {project === "addsub" && <AddsubParams cfg={cfg} set={set} mistakeMode={mistakeMode} onMistakeModeChange={onMistakeModeChange} />}
         {project === "multiply" && (
           <div className="grid grid-cols-2 gap-2.5">
-            <Card label="被乘数位数" emoji="✖️"><MiniStepper value={cfg.aDigits} min={1} max={6} suffix="位" color={T.sky} onChange={(v) => set({ aDigits: v })} /></Card>
-            <Card label="乘数位数" emoji="✖️"><MiniStepper value={cfg.bDigits} min={1} max={6} suffix="位" color={T.sky} onChange={(v) => set({ bDigits: v })} /></Card>
+            <Card label={L("被乘数位数", "Multiplicand digits")} emoji="✖️"><MiniStepper value={cfg.aDigits} min={1} max={6} suffix={L("位", "dig")} color={T.sky} onChange={(v) => set({ aDigits: v })} /></Card>
+            <Card label={L("乘数位数", "Multiplier digits")} emoji="✖️"><MiniStepper value={cfg.bDigits} min={1} max={6} suffix={L("位", "dig")} color={T.sky} onChange={(v) => set({ bDigits: v })} /></Card>
           </div>
         )}
         {project === "divide" && (
           <div className="grid grid-cols-2 gap-2.5">
-            <Card label="除数位数" emoji="➗"><MiniStepper value={cfg.divisorDigits} min={1} max={4} suffix="位" color={T.grape} onChange={(v) => set({ divisorDigits: v })} /></Card>
-            <Card label="商位数" emoji="➗"><MiniStepper value={cfg.quotientDigits} min={1} max={5} suffix="位" color={T.grape} onChange={(v) => set({ quotientDigits: v })} /></Card>
+            <Card label={L("除数位数", "Divisor digits")} emoji="➗"><MiniStepper value={cfg.divisorDigits} min={1} max={4} suffix={L("位", "dig")} color={T.grape} onChange={(v) => set({ divisorDigits: v })} /></Card>
+            <Card label={L("商位数", "Quotient digits")} emoji="➗"><MiniStepper value={cfg.quotientDigits} min={1} max={5} suffix={L("位", "dig")} color={T.grape} onChange={(v) => set({ quotientDigits: v })} /></Card>
           </div>
         )}
         {project === "bead" && (
           <div className="grid grid-cols-2 gap-2.5">
-            <Card label="位数" emoji="🧮"><MiniStepper value={cfg.beadDigits} min={1} max={5} suffix="位" color={T.grass} onChange={(v) => set({ beadDigits: v })} /></Card>
-            <Card label="显示时长" emoji="⏱️" hint="毫秒">
+            <Card label={L("位数", "Digits")} emoji="🧮"><MiniStepper value={cfg.beadDigits} min={1} max={5} suffix={L("位", "dig")} color={T.grass} onChange={(v) => set({ beadDigits: v })} /></Card>
+            <Card label={L("显示时长", "Show time")} emoji="⏱️" hint={L("毫秒", "ms")}>
               <div className="flex flex-wrap items-center gap-1.5">
                 {[800, 1500, 2500, 4000].map((ms) => (
                   <Pill key={ms} on={cfg.beadSpeedMs === ms} color={T.grass} onClick={() => set({ beadSpeedMs: ms })}>{(ms / 1000).toFixed(1)}s</Pill>
@@ -520,14 +586,14 @@ function ParamModal({ cfg, set, project, onCancel, onStart, mistakeMode, onMista
         )}
 
         <div style={{ marginTop: 12, background: "#FFFBF0", border: `2px dashed ${T.sun}66`, borderRadius: 16, padding: "9px 14px" }} className="flex items-center justify-between">
-          <span style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>🏆 答对一题可得</span>
-          <span style={{ fontSize: 18, fontWeight: 900, color: T.sunD }}>{previewScore(cfg)} 分</span>
+          <span style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>🏆 {L("答对一题可得", "Points per correct answer")}</span>
+          <span style={{ fontSize: 18, fontWeight: 900, color: T.sunD }}>{previewScore(cfg)} {L("分", "pts")}</span>
         </div>
 
         <div className="flex items-center gap-3" style={{ marginTop: 16 }}>
-          <button onClick={onCancel} style={{ flex: 1, background: "#fff", color: T.ink, border: `2px solid ${T.line}`, borderRadius: 999, padding: "13px", fontWeight: 800, cursor: "pointer" }}>取消</button>
+          <button onClick={onCancel} style={{ flex: 1, background: "#fff", color: T.ink, border: `2px solid ${T.line}`, borderRadius: 999, padding: "13px", fontWeight: 800, cursor: "pointer" }}>{L("取消", "Cancel")}</button>
           <button onClick={onStart} style={{ ...candyBtn(T.coral, T.coralD), flex: 2, padding: "14px", fontSize: 17, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <Play className="h-5 w-5" fill="#fff" /> 开始闯关
+            <Play className="h-5 w-5" fill="#fff" /> {L("开始闯关", "Start")}
           </button>
         </div>
       </div>
@@ -542,7 +608,7 @@ function AddsubParams({ cfg, set, mistakeMode, onMistakeModeChange }: {
     <div className="flex flex-col gap-2.5">
       {onMistakeModeChange && (
         <label className="flex items-center justify-end gap-2" style={{ fontSize: 12, color: T.inkSoft, fontWeight: 700 }}>
-          <span>只练错题</span><Switch checked={mistakeMode} onCheckedChange={onMistakeModeChange} />
+          <span>{L("只练错题", "Mistakes only")}</span><Switch checked={mistakeMode} onCheckedChange={onMistakeModeChange} />
         </label>
       )}
       <div className="grid grid-cols-3 gap-2">
@@ -552,48 +618,48 @@ function AddsubParams({ cfg, set, mistakeMode, onMistakeModeChange }: {
             <button key={m.id} onClick={() => set({ mode: m.id })}
               style={{ borderRadius: 16, padding: "10px 6px", cursor: "pointer", textAlign: "center", border: `2.5px solid ${on ? m.cD : T.line}`, background: on ? `linear-gradient(180deg, ${m.c}, ${m.cD})` : "#fff", color: on ? "#fff" : T.ink, boxShadow: on ? `0 4px 0 ${m.cD}` : "0 3px 0 #EADBBD" }}>
               <div style={{ fontSize: 22 }}>{m.emoji}</div>
-              <div style={{ fontSize: 14, fontWeight: 900 }}>{m.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 900 }}>{L(m.label, m.en)}</div>
             </button>
           );
         })}
       </div>
       <div className="grid grid-cols-2 gap-2.5">
-        <Card label="位数" emoji="🔢" hint="可范围">
+        <Card label={L("位数", "Digits")} emoji="🔢" hint={L("可范围", "range")}>
           <div className="flex flex-col gap-2">
-            <Row label="最小"><MiniStepper value={cfg.minDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ minDigits: v })} /></Row>
-            <Row label="最大"><MiniStepper value={cfg.maxDigits} min={1} max={9} suffix="位" color={T.sky} onChange={(v) => set({ maxDigits: v })} /></Row>
+            <Row label={L("最小", "Min")}><MiniStepper value={cfg.minDigits} min={1} max={9} suffix={L("位", "dig")} color={T.sky} onChange={(v) => set({ minDigits: v })} /></Row>
+            <Row label={L("最大", "Max")}><MiniStepper value={cfg.maxDigits} min={1} max={9} suffix={L("位", "dig")} color={T.sky} onChange={(v) => set({ maxDigits: v })} /></Row>
           </div>
         </Card>
-        <Card label="笔数" emoji="✏️" hint="1–200">
+        <Card label={L("笔数", "Terms")} emoji="✏️" hint="1–200">
           <div className="flex flex-wrap items-center gap-1.5">
             {COUNT_PRESETS.map((n) => (<Pill key={n} on={cfg.count === n} color={T.grass} onClick={() => set({ count: n })}>{n}</Pill>))}
             <NumInput value={COUNT_PRESETS.includes(cfg.count) ? null : cfg.count} min={1} max={200} onCommit={(v) => set({ count: v })} />
           </div>
         </Card>
-        <Card label="加减类型" emoji="➕">
+        <Card label={L("加减类型", "Type")} emoji="➕">
           <div className="flex flex-wrap items-center gap-1.5">
-            {ADDSUB_OPTIONS.map((o) => (<Pill key={o.id} on={cfg.addsub === o.id} color={T.coral} onClick={() => set({ addsub: o.id })}>{o.label}</Pill>))}
+            {ADDSUB_OPTIONS.map((o) => (<Pill key={o.id} on={cfg.addsub === o.id} color={T.coral} onClick={() => set({ addsub: o.id })}>{L(o.label, o.en)}</Pill>))}
           </div>
         </Card>
         {cfg.mode === "flash" && (
-          <Card label="单笔时间" emoji="⚡" hint="越小越快">
+          <Card label={L("单笔时间", "Per term")} emoji="⚡" hint={L("越小越快", "smaller = faster")}>
             <div className="flex flex-wrap items-center gap-1.5">
-              {SPEED_PRESETS.map((s) => (<Pill key={s.value} on={cfg.speedMs === s.value} color={T.sun} onClick={() => set({ speedMs: s.value })}>{s.label}</Pill>))}
-              <span style={{ fontSize: 10, color: T.inkSoft }}>或</span>
+              {SPEED_PRESETS.map((s) => (<Pill key={s.value} on={cfg.speedMs === s.value} color={T.sun} onClick={() => set({ speedMs: s.value })}>{L(s.label, s.en)}</Pill>))}
+              <span style={{ fontSize: 10, color: T.inkSoft }}>{L("或", "or")}</span>
               <SecInput value={SPEED_PRESETS.some((s) => s.value === cfg.speedMs) ? null : cfg.speedMs} onCommit={(ms) => set({ speedMs: ms })} />
             </div>
           </Card>
         )}
         {cfg.mode === "listen" && (
-          <Card label="语速" emoji="🔊">
+          <Card label={L("语速", "Speed")} emoji="🔊">
             <div className="flex flex-wrap items-center gap-1.5">
-              {LISTEN_PRESETS.map((s) => (<Pill key={s.value} on={cfg.listenLevel === s.value} color={T.sky} onClick={() => set({ listenLevel: s.value })}>{s.label}</Pill>))}
+              {LISTEN_PRESETS.map((s) => (<Pill key={s.value} on={cfg.listenLevel === s.value} color={T.sky} onClick={() => set({ listenLevel: s.value })}>{L(s.label, s.en)}</Pill>))}
             </div>
           </Card>
         )}
         {cfg.mode === "flash" && (
-          <Card label="显示笔数" emoji="🎞️" hint="可一次闪多笔">
-            <MiniStepper value={cfg.flashBatch} min={1} max={Math.max(1, Math.min(10, cfg.count))} suffix="笔" color={T.grape} onChange={(v) => set({ flashBatch: v })} />
+          <Card label={L("显示笔数", "Terms per flash")} emoji="🎞️" hint={L("可一次闪多笔", "flash several at once")}>
+            <MiniStepper value={cfg.flashBatch} min={1} max={Math.max(1, Math.min(10, cfg.count))} suffix={L("笔", "terms")} color={T.grape} onChange={(v) => set({ flashBatch: v })} />
           </Card>
         )}
       </div>
@@ -637,18 +703,18 @@ function AnswerPad({ value, onChange, onSubmit, onGiveUp, canReplay, onReplay }:
         {["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].map((d) => (
           <button key={d} style={key(d, () => append(d))} onClick={() => append(d)}>{d}</button>
         ))}
-        <button style={{ ...key("清除", clear, "muted"), gridColumn: "span 2" }} onClick={clear}>清除</button>
-        <button style={{ ...key("退格", back, "muted"), gridColumn: "span 3" }} onClick={back}>⌫ 退格</button>
+        <button style={{ ...key("清除", clear, "muted"), gridColumn: "span 2" }} onClick={clear}>{L("清除", "Clear")}</button>
+        <button style={{ ...key("退格", back, "muted"), gridColumn: "span 3" }} onClick={back}>⌫ {L("退格", "Back")}</button>
       </div>
       <div className="flex items-center gap-2.5">
-        <button onClick={onSubmit} disabled={!value.trim()} style={{ ...candyBtn(T.coral, T.coralD), flex: 1, padding: "14px", fontSize: 17, opacity: value.trim() ? 1 : 0.5 }}>提交 ✓</button>
+        <button onClick={onSubmit} disabled={!value.trim()} style={{ ...candyBtn(T.coral, T.coralD), flex: 1, padding: "14px", fontSize: 17, opacity: value.trim() ? 1 : 0.5 }}>{L("提交", "Submit")} ✓</button>
         {canReplay && (
           <button onClick={onReplay} style={{ background: "#fff", color: T.skyD, border: `2px solid ${T.sky}`, borderRadius: 999, padding: "12px 16px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <Volume2 className="h-4 w-4" /> 再听一遍
+            <Volume2 className="h-4 w-4" /> {L("再听一遍", "Replay")}
           </button>
         )}
       </div>
-      <button onClick={onGiveUp} style={{ textAlign: "center", fontSize: 12, color: T.inkSoft, fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>放弃本局</button>
+      <button onClick={onGiveUp} style={{ textAlign: "center", fontSize: 12, color: T.inkSoft, fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>{L("放弃本局", "Quit this round")}</button>
     </div>
   );
 }
@@ -699,7 +765,7 @@ function NumInput({ value, min, max, onCommit }: { value: number | null; min: nu
   useEffect(() => { setText(value === null ? "" : String(value)); }, [value]);
   const commit = (raw: string) => { const n = parseInt(raw.replace(/[^\d]/g, ""), 10); if (!isNaN(n)) onCommit(Math.min(max, Math.max(min, n))); };
   return (
-    <input inputMode="numeric" value={text} placeholder="自定" onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+    <input inputMode="numeric" value={text} placeholder={L("自定", "Custom")} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       className="font-mono-tabular" style={{ height: 30, width: 46, borderRadius: 10, border: `2px solid ${T.line}`, background: "#fff", textAlign: "center", fontSize: 12.5, fontWeight: 800, color: T.ink, outline: "none" }} />
   );
 }
@@ -715,9 +781,9 @@ function SecInput({ value, onCommit }: { value: number | null; onCommit: (ms: nu
   };
   return (
     <div className="flex items-center gap-1">
-      <input inputMode="decimal" value={text} placeholder="自定" onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      <input inputMode="decimal" value={text} placeholder={L("自定", "Custom")} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
         className="font-mono-tabular" style={{ height: 30, width: 50, borderRadius: 10, border: `2px solid ${T.line}`, background: "#fff", textAlign: "center", fontSize: 12.5, fontWeight: 800, color: T.ink, outline: "none" }} />
-      <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700 }}>秒</span>
+      <span style={{ fontSize: 10.5, color: T.inkSoft, fontWeight: 700 }}>{L("秒", "s")}</span>
     </div>
   );
 }

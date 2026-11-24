@@ -1,0 +1,12 @@
+# demo:根首页直接进珠心算
+[[redirects]]
+  from = "/"
+  to = "/play/abacus"
+  status = 302
+  force = true
+
+# SPA 兜底
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,20 @@
+# App 壳跨源拉词块库/视频(网页同源不受影响)
+/tts-bank2/*
+  Access-Control-Allow-Origin: *
+/tts-bank3/*
+  Access-Control-Allow-Origin: *
+/tts-bank4/*
+  Access-Control-Allow-Origin: *
+/tts-bank5/*
+  Access-Control-Allow-Origin: *
+# 2026-10-24:词块库让浏览器缓存 7 天 —— 之前每次打开听算都把 1124 个词块重新验证一遍(max-age=0),
+# 一个出口 IP 短时间请求过多会被 Netlify 主域名限流(本机批量下载 + 反复测试时触发过,整页打不开)。
+# 词块内容若要改,换文件名/目录,别原地覆盖(否则老用户要 7 天后才拿到新版)。
+/tts-bank6/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=604800
+/tts-audition/*
+  Access-Control-Allow-Origin: *
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *

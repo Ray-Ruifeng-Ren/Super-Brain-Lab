@@ -124,8 +124,47 @@ export function ArtGlance() {
   );
 }
 
+export function ArtMultiply() {
+  // 乘法 — ×
+  return (
+    <svg {...common}>
+      <path d="M32 32 L68 68 M68 32 L32 68" strokeWidth="2" />
+      <circle cx="50" cy="50" r="3" fill="hsl(var(--primary))" stroke="none" />
+    </svg>
+  );
+}
+
+export function ArtDivide() {
+  // 除法 — ÷
+  return (
+    <svg {...common}>
+      <line x1="26" y1="50" x2="74" y2="50" strokeWidth="2" />
+      <circle cx="50" cy="32" r="4" fill="currentColor" stroke="none" />
+      <circle cx="50" cy="68" r="4" fill="hsl(var(--primary))" stroke="none" />
+    </svg>
+  );
+}
+
+export function ArtBead() {
+  // 看珠 — abacus rod with beads
+  return (
+    <svg {...common}>
+      {[26, 42, 58, 74].map((x) => (
+        <line key={x} x1={x} y1="18" x2={x} y2="82" opacity="0.5" />
+      ))}
+      <line x1="18" y1="40" x2="82" y2="40" strokeWidth="1.6" />
+      {[26, 42, 58, 74].map((x, i) => (
+        <circle key={x} cx={x} cy={i === 1 ? 30 : 56} r="5" fill={i === 1 ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.15)"} stroke="hsl(var(--primary))" strokeWidth="1.2" />
+      ))}
+    </svg>
+  );
+}
+
 export const ART: Record<string, () => JSX.Element> = {
   flashmath: ArtFlashMath,
+  multiply: ArtMultiply,
+  divide: ArtDivide,
+  bead: ArtBead,
   gauntlet: ArtGauntlet,
   schulte: ArtSchulte,
   nback: ArtNBack,

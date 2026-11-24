@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>珠象 · 安卓 Pad 版下载</title>
+<link rel="icon" href="/favicon.png?v=5" type="image/png" />
+<meta property="og:title" content="珠象 · 安卓 Pad 版下载" />
+<meta property="og:image" content="https://superbrainlab.org/og-image.png" />
+<style>
+  :root { --gold1: #C9A24A; --gold2: #9C7A2E; --ink: #2B1A08; --paper: #FBF5E6; --muted: #6B5A45; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: radial-gradient(120% 90% at 50% 10%, #fbf5e6 0%, #efe3c6 100%); color: var(--ink);
+         font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 440px; background: linear-gradient(180deg, #FBF5E6, #F3E9D2); border: 1.5px solid #B8925A; border-radius: 18px;
+          box-shadow: 0 14px 30px rgba(80,55,20,.15), inset 0 0 0 4px #FBF5E6, inset 0 0 0 5px rgba(184,146,90,.45); padding: 28px 24px; text-align: center; }
+  .logo { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .logo img { height: 64px; }
+  h1 { font-size: 22px; margin: 6px 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .btn { display: block; width: 100%; padding: 14px; border-radius: 999px; background: linear-gradient(180deg, var(--gold1), var(--gold2)); color: var(--ink);
+         font-weight: 800; font-size: 17px; text-decoration: none; border: 1.5px solid #E8CC8A; box-shadow: 0 6px 14px rgba(0,0,0,.18); }
+  .tips { text-align: left; font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 18px; padding-left: 18px; }
+  .wx { display: none; background: #7A1F2B; color: #F6E7C1; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.6; margin-bottom: 16px; text-align: left; }
+  .wx b { color: #fff; }
+  .foot { margin-top: 18px; font-size: 12px; color: var(--muted); }
+  .foot a { color: var(--gold2); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><img src="/logo-emblem.png?v=2" alt="" /><img src="/logo-text.png?v=2" alt="珠象 ZHUXIANG" /></div>
+  <h1>安卓 Pad 版</h1>
+  <div class="meta">版本 v__VER__ · __SIZE__ MB · 更新于 __DATE__</div>
+  <div class="wx" id="wx">微信里不能直接下载安装包。请点右上角 <b>「···」</b>,选 <b>「在浏览器打开」</b>,再点下载。</div>
+  <a class="btn" href="/download/zhuxiang-pad.apk?v=__VER__" download="珠象-安卓Pad-v__VER__.apk">下载安装包</a>
+  <ol class="tips">
+    <li>下载完成后点开安装包;第一次安装时系统会提示「允许安装未知来源应用」,点允许即可。</li>
+    <li>已经装过旧版本的,直接安装新版本覆盖即可,账号和数据都不会丢。</li>
+    <li>本页面始终是最新版本,有更新时重新下载安装就行。</li>
+  </ol>
+  <div class="foot">网页版:<a href="/">superbrainlab.org</a></div>
+</div>
+<script>
+  if (/MicroMessenger/i.test(navigator.userAgent)) document.getElementById("wx").style.display = "block";
+</script>
+</body>
+</html>

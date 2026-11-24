@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AttemptRow } from "@/lib/practiceLog";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   attempts: AttemptRow[];
@@ -75,6 +76,7 @@ function Abacus({ value, columns }: { value: number; columns: number }) {
 }
 
 export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props) {
+  const { lang } = useI18n();
   const [step, setStep] = useState(1);
   const attempt = index !== null ? attempts[index] ?? null : null;
 
@@ -144,15 +146,16 @@ export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props)
   });
 
   if (!attempt || index === null) return null;
+  const T = (zh: string, en: string) => (lang === "en" ? en : zh);
 
   return (
     <Dialog open={!!attempt} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between text-sm">
-            <span>算珠演示</span>
+            <span>{T("算珠演示", "Bead walkthrough")}</span>
             <span className="font-mono-tabular text-xs text-muted-foreground">
-              错题 #{index + 1} / {attempts.length}
+              {T("错题", "Mistake")} #{index + 1} / {attempts.length}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -189,10 +192,10 @@ export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props)
         {/* Step info */}
         <div className="text-center text-xs">
           <div className="font-medium">
-            第 {step} 步 · 拨入 <span className="font-mono-tabular text-primary">{cur?.op}</span>
+            {T(`第 ${step} 步 · 拨入`, `Step ${step} · set`)} <span className="font-mono-tabular text-primary">{cur?.op}</span>
           </div>
           <div className="mt-0.5 text-muted-foreground">
-            当前算珠 = <span className="font-mono-tabular text-foreground">{cur?.running}</span>
+            {T("当前算珠", "Beads now")} = <span className="font-mono-tabular text-foreground">{cur?.running}</span>
           </div>
         </div>
 
@@ -200,13 +203,13 @@ export function AbacusDetail({ attempts, index, onIndexChange, onClose }: Props)
         <div className="flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={goPrev} disabled={!hasPrev}>
             <ChevronLeft className="h-4 w-4" />
-            {step > 1 ? "上一步" : "上一题"}
+            {step > 1 ? T("上一步", "Prev step") : T("上一题", "Prev problem")}
           </Button>
           <span className="font-mono-tabular text-xs text-muted-foreground">
             {step} / {n}
           </span>
           <Button size="sm" onClick={goNext} disabled={!hasNext}>
-            {step < n ? "下一步" : "下一题"}
+            {step < n ? T("下一步", "Next step") : T("下一题", "Next problem")}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

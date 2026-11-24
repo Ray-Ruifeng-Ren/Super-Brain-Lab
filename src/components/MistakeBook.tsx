@@ -9,6 +9,11 @@ import {
 } from "@/lib/practiceLog";
 import { AbacusDetail } from "./AbacusDetail";
 import { backfillMastery, masteredSet } from "@/lib/mistakeMastery";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 interface Props {
   game: string;
@@ -20,6 +25,7 @@ interface Props {
 const PAGE_SIZE = 15;
 
 export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange }: Props) {
+  useI18n();
   const [unsolved, setUnsolved] = useState<AttemptRow[]>([]);
   const [solved, setSolved] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +84,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
         <div className="mb-2 flex items-center justify-between rounded-md border border-border bg-muted/30 px-2.5 py-1.5">
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs font-medium">只练错题</span>
+            <span className="text-xs font-medium">{L("只练错题", "Mistakes only")}</span>
             {unsolved.length > 0 && (
               <span className="rounded bg-destructive/10 px-1 font-mono-tabular text-[10px] text-destructive">
                 {unsolved.length}
@@ -101,7 +107,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            未解决 <span className="font-mono-tabular">{unsolved.length}</span>
+            {L("未解决", "Open")} <span className="font-mono-tabular">{unsolved.length}</span>
           </button>
           <button
             type="button"
@@ -112,16 +118,16 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            已解决 <span className="font-mono-tabular">{solved.length}</span>
+            {L("已解决", "Solved")} <span className="font-mono-tabular">{solved.length}</span>
           </button>
         </div>
         {loading ? (
           <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
-            加载中…
+            {L("加载中…", "Loading…")}
           </div>
         ) : wrong.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-center text-xs text-muted-foreground">
-            {tab === "unsolved" ? "还没有错题，继续保持 👍" : "还没有已解决的错题"}
+            {tab === "unsolved" ? L("还没有错题，继续保持 👍", "No mistakes yet. Keep it up 👍") : L("还没有已解决的错题", "No solved mistakes yet")}
           </div>
         ) : (
           <>
@@ -143,14 +149,14 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                           {formatExpr(w.terms, w.signs)} = {w.answer}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
-                          你答{" "}
+                          {L("你答", "You said")}{" "}
                           <span className="font-mono-tabular text-destructive">
-                            {w.user_answer ?? "超时"}
+                            {w.user_answer ?? L("超时", "timed out")}
                           </span>
                           <span className="mx-1.5">·</span>
                           {timeAgo(w.created_at)}
                           <span className="mx-1.5">·</span>
-                          <span className="text-primary">查看算珠 →</span>
+                          <span className="text-primary">{L("查看算珠 →", "Show beads →")}</span>
                         </div>
                       </div>
                     </button>
@@ -166,7 +172,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                   disabled={safePage === 0}
                   className="flex items-center gap-0.5 rounded px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-30"
                 >
-                  <ChevronLeft className="h-3 w-3" /> 上一页
+                  <ChevronLeft className="h-3 w-3" /> {L("上一页", "Prev")}
                 </button>
                 <span className="font-mono-tabular text-[10px] text-muted-foreground">
                   {safePage + 1} / {totalPages}
@@ -177,7 +183,7 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
                   disabled={safePage >= totalPages - 1}
                   className="flex items-center gap-0.5 rounded px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-30"
                 >
-                  下一页 <ChevronRight className="h-3 w-3" />
+                  {L("下一页", "Next")} <ChevronRight className="h-3 w-3" />
                 </button>
               </div>
             )}
@@ -197,11 +203,11 @@ export function MistakeBook({ game, refreshKey, mistakeMode, onMistakeModeChange
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "刚刚";
-  if (m < 60) return `${m} 分钟前`;
+  if (m < 1) return L("刚刚", "just now");
+  if (m < 60) return L(`${m} 分钟前`, `${m} min ago`);
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} 小时前`;
+  if (h < 24) return L(`${h} 小时前`, `${h} h ago`);
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d} 天前`;
+  if (d < 30) return L(`${d} 天前`, `${d} d ago`);
   return new Date(iso).toLocaleDateString();
 }

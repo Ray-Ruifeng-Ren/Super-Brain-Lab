@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Check, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 const SUITS = [
   { s: "♠", name: "spade", red: false },
@@ -37,6 +42,7 @@ type Feedback = { id: string; correct: boolean } | null;
 const TOTAL_QUESTIONS = 5;
 
 export function CardMemoryGame() {
+  const { lang } = useI18n();
   const [deck, setDeck] = useState<Card[]>(() => buildDeck());
   const [phase, setPhase] = useState<Phase>("ready");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -106,11 +112,17 @@ export function CardMemoryGame() {
   };
 
   const status = useMemo(() => {
+    if (lang === "en") {
+      if (phase === "ready") return "A full 52-card deck is ready";
+      if (phase === "memorizing") return "Memorizing… tap “Done” when you're ready";
+      if (phase === "quiz") return `Quiz: card ${qIdx + 1} / ${questions.length} · score ${score}`;
+      return `Finished · score ${score} / ${questions.length}`;
+    }
     if (phase === "ready") return "52 张完整扑克牌已就绪";
     if (phase === "memorizing") return "记忆中… 完成后请点击「结束记忆」";
     if (phase === "quiz") return `出题中：第 ${qIdx + 1} / ${questions.length} 题 · 得分 ${score}`;
     return `结束 · 得分 ${score} / ${questions.length}`;
-  }, [phase, qIdx, questions.length, score]);
+  }, [phase, qIdx, questions.length, score, lang]);
 
   const currentQ = phase === "quiz" ? questions[qIdx] : null;
 
@@ -120,18 +132,18 @@ export function CardMemoryGame() {
         <div className="text-xs text-muted-foreground">{status}</div>
         <div className="flex flex-wrap gap-2">
           {phase === "ready" && (
-            <button onClick={start} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">开始记忆</button>
+            <button onClick={start} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">{L("开始记忆", "Start memorizing")}</button>
           )}
           {phase === "memorizing" && (
-            <button onClick={end} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">结束记忆</button>
+            <button onClick={end} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">{L("结束记忆", "Done")}</button>
           )}
           {phase === "quiz" && (
             <button onClick={() => setShowQuizDialog(true)} className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent">
-              查看题目
+              {L("查看题目", "Show card")}
             </button>
           )}
           <button onClick={reshuffle} className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent">
-            重新洗牌
+            {L("重新洗牌", "Reshuffle")}
           </button>
         </div>
       </div>
@@ -160,14 +172,16 @@ export function CardMemoryGame() {
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-        玩法：「开始记忆」展示 52 张牌 →「结束记忆」全部翻面 → 弹窗给出 {TOTAL_QUESTIONS} 张目标牌，依次点击你认为对应位置的牌，正确则翻开，错误闪红不翻开。
+        {lang === "en"
+          ? `How to play: “Start memorizing” shows all 52 cards → “Done” flips them face down → a popup shows ${TOTAL_QUESTIONS} target cards one by one; tap where you think each one is. Right flips it over; wrong flashes red.`
+          : `玩法：「开始记忆」展示 52 张牌 →「结束记忆」全部翻面 → 弹窗给出 ${TOTAL_QUESTIONS} 张目标牌，依次点击你认为对应位置的牌，正确则翻开，错误闪红不翻开。`}
       </p>
 
       <Dialog open={showQuizDialog && phase === "quiz"} onOpenChange={(o) => !o && setShowQuizDialog(false)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>第 {qIdx + 1} / {questions.length} 题</DialogTitle>
-            <DialogDescription>请在下方牌阵中点击对应这张牌的位置。</DialogDescription>
+            <DialogTitle>{L(`第 ${qIdx + 1} / ${questions.length} 题`, `Card ${qIdx + 1} / ${questions.length}`)}</DialogTitle>
+            <DialogDescription>{L("请在下方牌阵中点击对应这张牌的位置。", "Tap where this card is in the layout below.")}</DialogDescription>
           </DialogHeader>
           {currentQ && (
             <div className="flex flex-col items-center gap-3 py-2">
@@ -175,7 +189,7 @@ export function CardMemoryGame() {
                 <CardFace card={currentQ} large />
               </div>
               <div className="text-xs text-muted-foreground">
-                目标：<span className={cn("font-semibold", currentQ.suit.red ? "text-red-600" : "text-foreground")}>{currentQ.suit.s} {currentQ.rank}</span>
+                {L("目标：", "Target: ")}<span className={cn("font-semibold", currentQ.suit.red ? "text-red-600" : "text-foreground")}>{currentQ.suit.s} {currentQ.rank}</span>
               </div>
               {feedback && (
                 <div className={cn(
@@ -183,10 +197,10 @@ export function CardMemoryGame() {
                   feedback.correct ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                 )}>
                   {feedback.correct ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                  {feedback.correct ? "正确！" : "错误"}
+                  {feedback.correct ? L("正确！", "Correct!") : L("错误", "Wrong")}
                 </div>
               )}
-              <div className="text-[11px] text-muted-foreground">当前得分 {score}</div>
+              <div className="text-[11px] text-muted-foreground">{L("当前得分", "Score")} {score}</div>
             </div>
           )}
         </DialogContent>
@@ -195,16 +209,16 @@ export function CardMemoryGame() {
       <Dialog open={phase === "done"} onOpenChange={(o) => !o && reshuffle()}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>测试结束</DialogTitle>
-            <DialogDescription>本轮 {questions.length} 题已完成</DialogDescription>
+            <DialogTitle>{L("测试结束", "Test complete")}</DialogTitle>
+            <DialogDescription>{L(`本轮 ${questions.length} 题已完成`, `All ${questions.length} cards done`)}</DialogDescription>
           </DialogHeader>
           <div className="py-3 text-center">
             <div className="font-display text-4xl text-primary">{score} / {questions.length}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              准确率 {Math.round((score / Math.max(questions.length, 1)) * 100)}%
+              {L("准确率", "Accuracy")} {Math.round((score / Math.max(questions.length, 1)) * 100)}%
             </div>
             <button onClick={reshuffle} className="mt-5 rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
-              再来一局
+              {L("再来一局", "Play again")}
             </button>
           </div>
         </DialogContent>

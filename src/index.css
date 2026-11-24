@@ -1,4 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+/* 2026-11-24 字体本地托管(见 index.html 注释):Google Fonts 在国内会把整页首屏卡住 */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/fonts/inter-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Instrument Serif'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/instrument-serif-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-display: swap; src: url('/fonts/instrument-serif-italic-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* 用户指定的题目数字字体(数字清晰) */
+@font-face {
+  font-family: 'ZHKJ Number';
+  src: url('/fonts/zhkj-number.ttf') format('truetype'); /* 固定路径,index.html 里 preload;2026-10-17 家长「每题开始字体闪一下」= 字体按需加载的换字 */
+  font-weight: 400 700;
+  font-display: swap;
+  /* 用字体自带的全部真实字形(数字、逗号、点、连字符「-」、× ÷ 等);
+     注意:该字体的 U+2212 数学减号是空字形,故界面统一用有实笔画的连字符「-」表示减号 */
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,8 +20,8 @@
 @layer base {
   :root {
     /* surfaces */
-    --background: 40 33% 97%;       /* #FAFAF7 warm off-white */
-    --foreground: 220 14% 14%;      /* near-black ink */
+    --background: 40 45% 96%;       /* 2026-10-13 暖奶白(哈利波特风统一色调,原冷调蓝白已弃) */
+    --foreground: 220 20% 15%;      /* near-black ink(略偏冷) */
 
     --card: 0 0% 100%;
     --card-foreground: 220 14% 14%;
@@ -16,22 +29,22 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 14% 14%;
 
-    /* brand: deep emerald */
-    --primary: 160 84% 24%;          /* #047857 */
-    --primary-foreground: 40 33% 98%;
-    --primary-glow: 160 70% 40%;
+    /* brand: clean blue(蓝白搭配) */
+    --primary: 30 62% 42%;           /* 皮革金棕(原 #2563eb 蓝) */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 38 80% 60%;
 
-    --secondary: 40 20% 94%;
+    --secondary: 40 40% 92%;
     --secondary-foreground: 220 14% 14%;
 
-    --muted: 40 18% 93%;
-    --muted-foreground: 220 9% 42%;
+    --muted: 40 35% 92%;
+    --muted-foreground: 30 12% 40%;
 
-    --accent: 160 60% 94%;           /* emerald tint */
-    --accent-foreground: 160 84% 24%;
+    --accent: 40 80% 92%;            /* 金色淡底 */
+    --accent-foreground: 30 62% 32%;
 
-    --energy: 160 84% 24%;           /* unified to brand */
-    --energy-foreground: 40 33% 98%;
+    --energy: 217 91% 52%;           /* unified to brand */
+    --energy-foreground: 0 0% 100%;
 
     --success: 160 84% 30%;
     --success-foreground: 0 0% 100%;
@@ -39,18 +52,18 @@
     --destructive: 0 65% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 160 84% 24%;
+    --border: 36 30% 84%;
+    --input: 214 20% 89%;
+    --ring: 30 62% 42%;
 
     --radius: 0.625rem;
 
-    /* gradients (kept neutral; legacy class compatibility) */
-    --gradient-primary: linear-gradient(180deg, hsl(160 84% 26%), hsl(160 84% 22%));
-    --gradient-energy: linear-gradient(180deg, hsl(160 84% 26%), hsl(160 84% 22%));
-    --gradient-hero: linear-gradient(180deg, hsl(160 84% 22%), hsl(160 84% 18%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(40 33% 97%));
-    --gradient-gold: linear-gradient(180deg, hsl(160 84% 26%), hsl(160 84% 22%));
+    /* gradients (blue brand) */
+    --gradient-primary: linear-gradient(180deg, hsl(217 91% 56%), hsl(221 83% 48%));
+    --gradient-energy: linear-gradient(180deg, hsl(38 80% 58%), hsl(30 62% 42%));
+    --gradient-hero: linear-gradient(180deg, hsl(221 83% 48%), hsl(224 76% 40%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(214 40% 98%));
+    --gradient-gold: linear-gradient(180deg, hsl(42 85% 60%), hsl(32 70% 44%));
 
     --shadow-sm: 0 1px 2px 0 hsl(220 14% 14% / 0.04);
     --shadow-md: 0 4px 16px -8px hsl(220 14% 14% / 0.08);
@@ -60,6 +73,8 @@
     --transition-base: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  :root { color-scheme: only light; } /* 羊皮纸主题只有浅色版;禁止浏览器自动深色反转 */
+
   .dark {
     --background: 220 14% 8%;
     --foreground: 40 20% 94%;
@@ -67,17 +82,17 @@
     --card-foreground: 40 20% 94%;
     --popover: 220 14% 11%;
     --popover-foreground: 40 20% 94%;
-    --primary: 160 75% 45%;
+    --primary: 213 94% 62%;
     --primary-foreground: 220 14% 8%;
     --secondary: 220 14% 16%;
     --secondary-foreground: 40 20% 94%;
     --muted: 220 14% 14%;
     --muted-foreground: 220 9% 60%;
-    --accent: 160 50% 18%;
-    --accent-foreground: 160 75% 70%;
+    --accent: 217 45% 22%;
+    --accent-foreground: 213 94% 80%;
     --border: 220 14% 18%;
     --input: 220 14% 18%;
-    --ring: 160 75% 45%;
+    --ring: 213 94% 62%;
     --gradient-card: linear-gradient(180deg, hsl(220 14% 12%), hsl(220 14% 9%));
   }
 }
@@ -101,9 +116,22 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+  /* 练习题目/竖式/答案字体:圆润、每个数字都清晰易读(适合孩子);tabular-nums 让列对齐 */
+  .font-hand {
+    font-family: 'ZHKJ Number', 'Baloo 2', ui-rounded, 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
 }
 
 @layer utilities {
+  /* 常显滚动条(macOS 默认隐藏 overlay 滚动条,榜单超过可视区时用户看不出能滚) */
+  .scroll-visible { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+  .scroll-visible::-webkit-scrollbar { width: 8px; }
+  .scroll-visible::-webkit-scrollbar-track { background: transparent; }
+  .scroll-visible::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+  .scroll-visible::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
   .bg-gradient-primary { background: var(--gradient-primary); }
   .bg-gradient-energy { background: var(--gradient-energy); }
   .bg-gradient-hero { background: var(--gradient-hero); }
@@ -131,26 +159,26 @@
 .animate-spark-float { animation: spark-drift 7s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .animate-spark-float { animation: none; } }
 
-/* ===== 闪电心算 page — warm/fire tone, scoped to .flash-warm only ===== */
+/* ===== 闪电心算 page — blue tone, scoped to .flash-warm only(类名保留,配色改蓝)===== */
 .flash-warm {
-  --primary: 22 88% 52%;
-  --primary-foreground: 40 60% 98%;
-  --primary-glow: 30 95% 60%;
-  --ring: 22 88% 52%;
-  --border: 30 52% 76%;
-  --input: 30 52% 76%;
-  --card: 34 72% 97%;
-  --card-foreground: 24 35% 20%;
-  --secondary: 32 60% 92%;
-  --secondary-foreground: 24 35% 24%;
-  --muted: 32 42% 90%;
-  --muted-foreground: 26 22% 42%;
-  --accent: 28 85% 90%;
-  --accent-foreground: 24 45% 26%;
+  --primary: 30 62% 42%;
+  --primary-foreground: 0 0% 100%;
+  --primary-glow: 213 94% 68%;
+  --ring: 30 62% 42%;
+  --border: 214 45% 82%;
+  --input: 214 45% 82%;
+  --card: 210 60% 98%;
+  --card-foreground: 220 32% 20%;
+  --secondary: 214 50% 93%;
+  --secondary-foreground: 220 32% 24%;
+  --muted: 214 40% 91%;
+  --muted-foreground: 220 15% 42%;
+  --accent: 214 92% 92%;
+  --accent-foreground: 217 70% 30%;
 }
-/* subtle warm glow + spark on the flashmath panels (点缀,不喧宾夺主) */
+/* subtle blue glow + spark on the flashmath panels(点缀,不喧宾夺主) */
 .flash-warm .fw-panel {
-  box-shadow: 0 0 0 1px hsl(30 60% 78% / 0.6), 0 14px 34px -22px hsl(22 85% 40% / 0.4);
+  box-shadow: 0 0 0 1px hsl(214 60% 80% / 0.6), 0 14px 34px -22px hsl(221 85% 45% / 0.4);
   position: relative;
 }
 .flash-warm .fw-panel::after {
@@ -158,8 +186,8 @@
   position: absolute;
   top: 10px; right: 12px;
   width: 7px; height: 7px; border-radius: 999px;
-  background: radial-gradient(circle, hsl(32 100% 66%) 0%, hsl(24 95% 52% / 0) 70%);
-  box-shadow: 0 0 10px 2px hsl(28 100% 60% / 0.7);
+  background: radial-gradient(circle, hsl(213 100% 70%) 0%, hsl(217 95% 55% / 0) 70%);
+  box-shadow: 0 0 10px 2px hsl(215 100% 62% / 0.7);
   animation: ember-twinkle 3.2s ease-in-out infinite;
 }
 @keyframes ember-twinkle { 0%,100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
@@ -170,6 +198,12 @@
 }
 .animate-ember { animation: ember-rise linear infinite; }
 @media (prefers-reduced-motion: reduce) { .animate-ember, .flash-warm .fw-panel::after { animation: none; } }
+@keyframes champ-glow {
+  0%, 100% { box-shadow: inset 0 0 0 1px hsl(43 96% 56% / 0.25), 0 0 0 0 hsl(43 96% 56% / 0); }
+  50% { box-shadow: inset 0 0 0 1px hsl(43 96% 56% / 0.5), 0 2px 20px -6px hsl(43 96% 56% / 0.55); }
+}
+.animate-champ-glow { animation: champ-glow 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .animate-champ-glow { animation: none; } }
 @keyframes brain-breath { 0%, 100% { transform: scale(0.995); } 50% { transform: scale(1.012); } }
 .animate-fade-in { animation: fade-in .25s ease-out; }
 .animate-pop-in { animation: pop-in .2s cubic-bezier(.4,0,.2,1); }
@@ -181,3 +215,241 @@
 .animate-fade-rise-d2 { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) .3s both; }
 .animate-fade-rise-d3 { animation: fade-rise .9s cubic-bezier(.2,.7,.2,1) .45s both; }
 .animate-brain-breath { animation: brain-breath 3.4s ease-in-out infinite; }
+
+/* 教练端课堂演示配置区放大版(2026-10-13「点击完配置的页面要大」):放大 HwItemEditor 的控件尺寸 */
+@media (min-width: 1101px) { .hw-lg .text-xs { font-size: 1.05rem; line-height: 1.6rem; } }
+@media (min-width: 1101px) { .hw-lg .text-sm { font-size: 1.15rem; } }
+@media (min-width: 1101px) { .hw-lg .text-\[11px\] { font-size: .95rem; } }
+@media (min-width: 1101px) { .hw-lg .h-7 { height: 2.75rem; } }
+@media (min-width: 1101px) { .hw-lg .w-6 { width: 2.4rem; } }
+@media (min-width: 1101px) { .hw-lg .w-12 { width: 4.5rem; } }
+@media (min-width: 1101px) { .hw-lg .w-14 { width: 5rem; } }
+@media (min-width: 1101px) { .hw-lg .px-3 { padding-left: 1.25rem; padding-right: 1.25rem; } }
+@media (min-width: 1101px) { .hw-lg .py-1 { padding-top: .55rem; padding-bottom: .55rem; } }
+@media (min-width: 1101px) { .hw-lg .space-y-2\.5 > * + * { margin-top: 1.1rem; } }
+@media (min-width: 1101px) { .hw-lg .gap-1\.5 { gap: .75rem; } }
+
+/* ===== 首页古典书入口(2026-10-13):皮面精装书,hover 沿书脊翻开 ===== */
+.book { width: 11rem; height: 15.5rem; perspective: 1400px; }
+.book-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.book-page {
+  position: absolute; inset: 0; border-radius: 4px 12px 12px 4px;
+  background: linear-gradient(90deg, #E9DDC4 0%, #F7EFDD 10%, #FBF5E6 100%);
+  box-shadow: 0 18px 30px rgba(0,0,0,.18), inset -6px 0 10px rgba(0,0,0,.06);
+}
+.book-page-rule { position: absolute; left: 10%; right: 8%; top: 1.6rem; bottom: 1.4rem; background: repeating-linear-gradient(180deg, transparent 0 1.35rem, rgba(120,95,60,.12) 1.35rem 1.4rem); pointer-events: none; }
+.book-cover {
+  position: absolute; inset: 0; border-radius: 4px 12px 12px 4px; transform-origin: left center;
+  transform: rotateY(0deg); transition: transform .7s cubic-bezier(.2,.8,.2,1); backface-visibility: hidden;
+  box-shadow: 0 18px 30px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.book-cover-frame { position: absolute; inset: .55rem; border: 1px solid rgba(232,204,138,.55); border-radius: 3px 9px 9px 3px; pointer-events: none; }
+.book-ribbon { position: absolute; right: 1.1rem; top: -.1rem; width: .55rem; height: 2.6rem; background: linear-gradient(180deg, #C9A24A, #9C7A2E); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); }
+.book-spine { position: absolute; left: -.5rem; top: .35rem; bottom: .35rem; width: .6rem; border-radius: 3px 0 0 3px; transform: rotateY(-90deg) translateX(-.3rem); transform-origin: right center; filter: brightness(.75); }
+.book:hover .book-cover { transform: rotateY(-120deg); }
+.book:hover .book-inner { transform: translateY(-6px); transition: transform .5s; }
+
+/* 首页纸质背景(替代视频) */
+.paper-bg {
+  background:
+    radial-gradient(120% 80% at 50% -10%, #FFF9EC 0%, #F3E9D2 55%, #E6D6B4 100%);
+}
+.paper-bg::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.25 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ===== 锦旗 / 学院旗(2026-10-13 哈利波特风) ===== */
+.pennant { position: relative; display: inline-block; transform-origin: top center; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+.pennant:hover { transform: rotate(-1.5deg); }
+.pennant-rod { height: 10px; margin: 0 -10px; border-radius: 6px; background: linear-gradient(180deg,#C9A24A,#8A6A22); box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+.pennant-cloth { position: relative; margin-top: -2px; clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); box-shadow: 0 16px 28px rgba(0,0,0,.22); }
+.pennant-trim { position: absolute; inset: 8px 8px 0 8px; bottom: 18%; border: 1.5px solid rgba(232,204,138,.6); border-bottom: none; pointer-events: none; }
+.pennant-body { position: relative; padding: 1.4rem 1.2rem 2.6rem; color: #E8CC8A; text-align: center; }
+.pennant-md { width: 15rem; }
+.pennant-lg { width: 11rem; }
+.pennant-lg .pennant-body { padding: 1.2rem .8rem 2.4rem; }
+.pennant-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; align-items: flex-start; }
+/* 教练端课堂演示 7 面旗(2026-11-02 加第 7 面「指法教学」):统一 4 + 3 两行居中,与首页书架一致;
+   平板横屏(1024×768 起)两行一屏放下不用滑(2026-10-26 的要求),一行 7 面时「心算马拉松」会被挤成两行 */
+.coach-pennant-wrap { display: flex; flex-direction: column; align-items: center; gap: .75rem; }
+.coach-pennants { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: .75rem; }
+
+
+/* 哈利波特风羊皮纸卡片 / 皮革按钮 */
+.hp-card { background: linear-gradient(180deg,#FBF5E6,#F3E9D2); border: 1.5px solid #B8925A; border-radius: 18px; box-shadow: 0 14px 30px rgba(80,55,20,.15), inset 0 0 0 4px #FBF5E6, inset 0 0 0 5px rgba(184,146,90,.45); }
+.hp-leather { background: linear-gradient(180deg,#5B2A2A,#3A1818); color: #E8CC8A; border: 1.5px solid #C9A24A; box-shadow: 0 6px 14px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12); }
+.hp-leather-on { background: linear-gradient(180deg,#C9A24A,#9C7A2E); color: #2B1A08; border-color: #E8CC8A; }
+.hp-title { font-family: var(--font-display, serif); color: #3A2A1A; letter-spacing: .04em; }
+
+/* ===== 参数配置 UI(2026-10-13 参考珠心算「参数设置」弹窗):奶油卡片 + 糖果圆钮 + 橙色胶囊 ===== */
+.cfg-panel { background: radial-gradient(120% 100% at 50% 0%, #FFFDF7, #FFF4DC); border: 2px solid #F0D9A8; border-radius: 22px; padding: 14px; }
+.cfg-card { background: #fff; border: 2px solid #F0DDB5; border-radius: 18px; padding: 12px 14px; box-shadow: 0 3px 0 #EADBBD; min-width: 0; overflow-wrap: anywhere; } /* min-width:0:网格子项允许收缩,胶囊多时换行而不是撑破边框(2026-10-15 付海东「都错位了超出边框」) */
+.cfg-card-title { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 900; color: #B8572C; }
+.cfg-round { width: 36px; height: 36px; border-radius: 999px; border: none; font-size: 20px; font-weight: 900; line-height: 1; color: #fff; cursor: pointer; background: linear-gradient(180deg,#86DB7A,#3FB15A); box-shadow: 0 3px 0 #2E8A45; }
+.cfg-round:active { transform: translateY(2px); box-shadow: 0 1px 0 #2E8A45; }
+.cfg-round:disabled { background: #EDE4D2; box-shadow: 0 3px 0 #D9CDB4; color: #B9AD95; cursor: default; }
+.cfg-num { width: 4.2rem; height: 36px; text-align: center; font-weight: 900; font-size: 18px; color: #4B3A28; background: transparent; border: none; outline: none; font-variant-numeric: tabular-nums; }
+.cfg-num:focus { background: #FFF4DC; border-radius: 10px; }
+/* 2026-10-17 付海东(微信内置浏览器,四列):「位数」卡里数字框被压成零宽看不见 → 数字框/圆钮不许收缩,放不下就整组换行 */
+.cfg-num, .cfg-round { flex: 0 0 auto; }
+.cfg-pair { flex-wrap: wrap; white-space: normal; }
+.cfg-pair > span:first-child { white-space: nowrap; }
+.cfg-pill { padding: 7px 14px; border-radius: 999px; border: 2px solid #F0DDB5; background: #fff; color: #7A6248; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 #EADBBD; }
+.cfg-pill-on { background: linear-gradient(180deg,#FFB13D,#F0801E); border-color: #E0741A; color: #fff; box-shadow: 0 2px 0 #C45E12; }
+.cfg-summary { background: #FFFBF0; border: 2px dashed #F0C56A; border-radius: 16px; padding: 9px 14px; font-size: 13px; font-weight: 800; color: #7A6248; }
+.cfg-start { background: linear-gradient(180deg,#FF9A3C,#F26A1B) !important; color: #fff !important; box-shadow: 0 5px 0 #C9520F !important; border: none !important; }
+.cfg-start:hover { filter: brightness(1.05); }
+@media (min-width: 1101px) { .hw-lg .cfg-card-title { font-size: 16px; } }
+@media (min-width: 1101px) { .hw-lg .cfg-round { width: 40px; height: 40px; font-size: 22px; } }
+@media (min-width: 1101px) { .hw-lg .cfg-num { font-size: 21px; width: 4.4rem; height: 40px; } }
+@media (min-width: 1101px) { .hw-lg .cfg-pill { font-size: 15px; padding: 9px 18px; } }
+
+/* 课堂演示配置:紧凑版,一屏放下(2026-10-13) */
+.hw-compact .cfg-panel { padding: 8px; gap: 8px; }
+.hw-compact .cfg-card { padding: 6px 10px; }
+.hw-compact .cfg-card-title { margin-bottom: 3px; font-size: 13px; }
+.hw-compact .cfg-round { width: 32px; height: 32px; font-size: 18px; }
+.hw-compact .cfg-num { font-size: 17px; width: 3.8rem; height: 32px; }
+/* 出题系统自定义加减:位数 / 笔数各一行四个小步进器;手机上竖排(+ 上 − 下) */
+.cfg-mini .cfg-round { width: 30px; height: 30px; font-size: 17px; }
+.cfg-mini .cfg-num { width: 2.6rem; height: 30px; font-size: 17px; }
+@media (max-width: 639px) { .cfg-mini > span.inline-flex { flex-direction: column-reverse; gap: 4px; } }
+.hw-compact .cfg-pill { font-size: 13px; padding: 5px 11px; }
+.hw-compact .cfg-card .flex-wrap { gap: 4px 6px; }
+/* 2026-10-16 配置网格按「容器宽度」分列(付海东「作业里的界面都乱了」:布置作业的编辑器只有 ~450px 宽,却按 1366 视口排了 4 列):
+   <560px 1 列;≥560 两列;课堂演示/广场(hw-compact)≥900 三列、≥1180 四列(与原视口规则在 1024/1280 屏上等价) */
+.cfg-host { container-type: inline-size; width: 100%; }
+.cfg-panel.cfg-grid { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+.cfg-full { grid-column: 1 / -1; }
+@container (min-width: 560px) {
+  .cfg-panel.cfg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .cfg-span { grid-column: span 2; }
+}
+@container (min-width: 820px) {
+  .hw-compact .cfg-panel.cfg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hw-compact .cfg-span { grid-column: span 3; }
+}
+@container (min-width: 1040px) {
+  .hw-compact .cfg-panel.cfg-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hw-compact .cfg-span { grid-column: span 3; }
+}
+
+/* ===== 首页背景 v2(2026-10-13 试版):羊皮纸 + 星盘水印 + 木质书案 + 暗角 ===== */
+.home-bg {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255,250,236,.9) 0%, rgba(243,233,210,0) 60%),
+    linear-gradient(180deg, #F6EDD8 0%, #EEDFC0 55%, #E3D0A8 100%);
+}
+.home-bg::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .13;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600'%3E%3Cg fill='none' stroke='%237A5A2A' stroke-width='1.2'%3E%3Ccircle cx='600' cy='120' r='260'/%3E%3Ccircle cx='600' cy='120' r='210'/%3E%3Ccircle cx='600' cy='120' r='150'/%3E%3Ccircle cx='600' cy='120' r='70'/%3E%3Cpath d='M340 120h520M600-140v520M416-64l368 368M784-64L416 304'/%3E%3Cpath d='M600 50l12 58 58 12-58 12-12 58-12-58-58-12 58-12z' fill='%237A5A2A' fill-opacity='.35'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center -40px; background-size: 1200px 600px;
+}
+.home-bg::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0) 72%, rgba(74,46,18,.10) 82%, rgba(60,36,12,.28) 100%),
+    radial-gradient(90% 70% at 50% 60%, rgba(0,0,0,0) 55%, rgba(60,36,12,.22) 100%);
+}
+
+/* 护眼舞台(2026-10-15 家长「黑背景白字刺眼」):作答器加 .stage-light 后,白字/白线/半透明白底整体翻成墨色 */
+.stage-light { color: #2B1D0E; }
+.stage-light .text-white, .stage-light [class*="text-white/"] { color: #2B1D0E !important; }
+.stage-light [class*="text-white/4"], .stage-light [class*="text-white/5"], .stage-light [class*="text-white/6"], .stage-light [class*="text-white/7"] { color: rgba(43,29,14,.6) !important; }
+.stage-light .text-amber-300 { color: #B8572C !important; }
+.stage-light .text-amber-200 { color: #8A4A1C !important; }
+.stage-light [class*="bg-white/1"], .stage-light [class*="bg-white/2"] { background: rgba(43,29,14,.07) !important; }
+.stage-light [class*="border-white/"] { border-color: rgba(43,29,14,.3) !important; }
+.stage-light [class*="bg-black/"] { background: rgba(255,255,255,.55) !important; }
+.stage-light [class*="text-shadow"] { text-shadow: none !important; }
+.stage-light .bg-amber-400 { background: #E0741A !important; color: #fff !important; }
+
+/* ===== App 壳 / 全面屏安全区(2026-10-15 平板+手机 App):固定底栏避开 Home 条,顶栏避开刘海 ===== */
+.safe-b { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-t { padding-top: env(safe-area-inset-top, 0px); }
+/* 手机端底部项目栏:横向滑动的小胶囊(桌面/平板仍是等分网格) */
+@media (max-width: 639px) {
+  .proj-nav { display: flex; overflow-x: auto; gap: 6px; padding: 8px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .proj-nav::-webkit-scrollbar { display: none; }
+  .proj-nav > button { flex: 0 0 auto; min-width: 4.4rem; flex-direction: column; gap: 2px; padding: 6px 10px; font-size: 11px; line-height: 1.1; border-radius: 14px; }
+  .proj-nav > button > span { font-size: 18px; }
+}
+/* 平板竖屏(640–1023px):七个按钮并排放不下文字,改成图标在上、字在下 */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .proj-nav > button { flex-direction: column; gap: 2px; padding: 6px 4px; font-size: 13px; line-height: 1.1; }
+  .proj-nav > button > span { font-size: 20px; }
+}
+
+/* App 壳(html.native):WKWebView 铺满整屏,状态栏压在页面上 → 顶部留出安全区并垫一条米色底;sticky 顶栏吸在安全区之下 */
+html.native body { padding-top: env(safe-area-inset-top, 0px); }
+html.native::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #FBF5E6; z-index: 120; pointer-events: none; }
+html.native .sticky.top-0 { top: env(safe-area-inset-top, 0px); }
+html.native .safe-t { padding-top: 0; }
+html.native { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+html.native body { overscroll-behavior-y: none; }
+
+/* 手机(<640px)作答器:底部字号胶囊缩小并贴左下,舞台底部留出 5.5rem 免得压住小键盘/提交键(2026-10-16 用户「App 有点挤」) */
+@media (max-width: 639px) {
+  .hw-stage { padding-bottom: 5.5rem !important; }
+  .hw-fontpill { transform: scale(.85); transform-origin: left bottom; left: .5rem; bottom: .5rem; }
+}
+
+/* 手机首页书架(2026-10-16 用户「移动端最起码放两本书,整体缩放一下」):用 transform 缩放(zoom 会把 3D 翻页算坏)
+   竖屏 80% 一行两本;横屏 50% 一行七本 */
+@media (max-width: 639px) and (orientation: portrait) {
+  .book { width: 8.8rem; height: 12.4rem; }
+  .book-inner { width: 11rem; height: 15.5rem; transform: scale(.8); transform-origin: top left; }
+}
+/* 平板 / 笔记本横屏(高 ≤ 900px):书架 4 + 3 两行要一屏放下(2026-11-02 安卓 Pad 版实测 1280×800 第二排被截),书缩到 80% */
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 900px) {
+  .book { width: 8.8rem; height: 12.4rem; }
+  .book-inner { width: 11rem; height: 15.5rem; transform: scale(.8); transform-origin: top left; }
+}
+/* 手机横屏(html.phone-landscape 由 main.tsx 按屏幕尺寸打标) */
+  html.phone-landscape .book { width: 6.8rem; height: 9.6rem; }
+  html.phone-landscape .book-inner { width: 11rem; height: 15.5rem; transform: scale(.62); transform-origin: top left; }
+
+/* ===== 横屏手机(高 ≤ 500px):一屏放下,信息密度向网页看齐(2026-10-16 用户「手机也横屏」「每页信息密度要和网页类似」) ===== */
+/* 手机横屏(html.phone-landscape 由 main.tsx 按屏幕尺寸打标) */
+  /* 版面宽度由 main.tsx 把 viewport 设成 1100px 实现(整体缩放);这里只收紧控件 */
+  html.phone-landscape .cfg-start { position: static !important; margin-top: .5rem; }
+  html.phone-landscape .proj-nav { padding: 4px 8px; gap: 6px; }
+  html.phone-landscape .proj-nav > button { padding: 4px 10px !important; font-size: 12px !important; flex-direction: row !important; gap: 4px !important; }
+  html.phone-landscape .proj-nav > button > span { font-size: 15px !important; }
+  html.phone-landscape .hw-compact .cfg-panel { padding: 6px; gap: 6px; }
+  html.phone-landscape .hw-compact .cfg-card { padding: 4px 8px; }
+  html.phone-landscape .hw-compact .cfg-card-title { margin-bottom: 2px; font-size: 12px; }
+  html.phone-landscape .hw-compact .cfg-round { width: 26px; height: 26px; font-size: 15px; }
+  html.phone-landscape .hw-compact .cfg-num { font-size: 15px; width: 3.2rem; height: 26px; }
+  html.phone-landscape .hw-compact .cfg-pill { font-size: 12px; padding: 3px 9px; }
+  html.phone-landscape .cfg-start { height: 2.6rem !important; font-size: 1rem !important; }
+  html.phone-landscape main.container { padding-top: .25rem !important; }
+
+/* 作答鼓励特效(PraiseBurst):从中心飞散 + 旋转 + 淡出 */
+.praise-p { transform: translate(-50%, -50%) scale(0.3); opacity: 0; animation-name: praise-fly; animation-timing-function: cubic-bezier(.15,.7,.3,1); animation-fill-mode: forwards; will-change: transform, opacity; }
+@keyframes praise-fly {
+  0% { transform: translate(-50%, -50%) scale(0.3) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .praise-p { display: none; } }
+
+/* 作答:平板 / 电脑横屏时题目在左、键盘在右(2026-11-03 孟阳「平板这个键盘不全」「听心算键盘也是在侧面」);竖屏、手机仍上下排 */
+@media (orientation: landscape) and (min-width: 820px) {
+  .answer-split { flex-direction: row !important; align-items: center !important; justify-content: center; gap: 2.5rem !important; max-width: 76rem !important; }
+  .answer-split > .answer-left { flex: 1 1 0; min-width: 0; }
+  .answer-split .glance-box { height: calc(100dvh - 9rem) !important; }
+  .answer-split > .answer-right { width: 22rem; flex: none; }
+}
+
+/* 比赛作答(2026-11-08 付海东「比赛时题和键盘同时在屏幕上」):竖屏手机 / 平板上题列压矮、键盘收紧,一屏放下不用滚 */
+@media (orientation: portrait) {
+  .answer-compact { gap: 0.6rem !important; }
+  .answer-compact .glance-box { height: max(26vh, calc(100dvh - 30rem)) !important; }
+  .answer-compact form { gap: 0.5rem !important; }
+  .answer-compact form > div:first-child { display: none; }
+  .answer-compact input { height: 3.2rem !important; }
+  .answer-compact form .grid button { height: 2.7rem !important; }
+}

@@ -1,0 +1,6 @@
+# Supabase 同域代理(2026-10-09):国内部分运营商/微信内置浏览器直连 *.supabase.co 会被墙,
+# 注册报 Failed to fetch。浏览器只打 superbrainlab.org/sb-api/*,由 Netlify 服务端转发,全线路畅通。
+/sb-api/*  https://byjwwrhsafsuzgiydiuy.supabase.co/:splat  200
+
+# SPA 路由兜底
+/*  /index.html  200

@@ -29,6 +29,11 @@ import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
 import { Play, RotateCcw, Check, X, Minus, Zap, Star, ChevronDown, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 type Phase = "config" | "ready" | "playing" | "answer" | "result";
 
@@ -45,6 +50,14 @@ interface FlashItem {
 
 const ANSWER_WINDOW_MS = 12000;
 
+// 干扰档 / 预设的英文显示名(lib/gauntlet 里是中文)
+const CHAOS_EN: Record<string, { name: string; desc: string }> = {
+  mild: { name: "Mild", desc: "Position drift + faint background noise" },
+  strong: { name: "Strong", desc: "+ size jitter + 1 decoy number" },
+  chaos: { name: "Chaos", desc: "+ dense noise + 2 decoys + color flip (orange cue)" },
+};
+const PRESET_EN: Record<string, string> = { starter: "Starter", standard: "Standard", advanced: "Advanced", extreme: "Extreme" };
+
 export function GauntletFlashGame({
   onCfgChange,
   onFinished,
@@ -52,6 +65,7 @@ export function GauntletFlashGame({
   onCfgChange?: (cfg: GauntletConfig) => void;
   onFinished?: () => void;
 }) {
+  const { lang } = useI18n();
   const [cfg, setCfg] = useState<GauntletConfig>(DEFAULT_GAUNTLET);
   const [phase, setPhase] = useState<Phase>("config");
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -146,7 +160,7 @@ export function GauntletFlashGame({
         if (u.user) await submitGauntletOverall(u.user.id);
         onFinished?.();
       } else if (r.error === "未登录") {
-        toast({ title: "登录后即可上榜", description: "本局成绩未保存到云端。" });
+        toast({ title: L("登录后即可上榜", "Log in to get on the leaderboard"), description: L("本局成绩未保存到云端。", "This score wasn't saved to the cloud.") });
       }
     }
   };
@@ -160,10 +174,37 @@ export function GauntletFlashGame({
         <details className="group rounded-md border border-border bg-card/40 p-3 text-xs">
           <summary className="flex cursor-pointer items-center justify-between font-semibold text-foreground">
             <span className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-primary" /> 玩法详细说明
+              <Zap className="h-3.5 w-3.5 text-primary" /> {L("玩法详细说明", "How to play")}
             </span>
             <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
           </summary>
+          {lang === "en" ? (
+          <div className="mt-3 space-y-2.5 leading-relaxed text-muted-foreground">
+            <p>
+              <b className="text-foreground">🎯 Goal: </b>do flash mental math under visual and attention distractions.
+              The problems are the same as regular Flash Math; <b className="text-foreground">you still only enter the final result</b>.
+            </p>
+            <p>
+              <b className="text-foreground">⚙️ Settings: </b>terms, digits, flash speed, with or without subtraction, at the same pace as regular Flash Math.
+            </p>
+            <p>
+              <b className="text-foreground">🧩 Three distraction levels:</b>
+            </p>
+            <ul className="ml-4 list-disc space-y-0.5">
+              <li><b>Mild</b>: position drift + faint noise (×1.4)</li>
+              <li><b>Strong</b>: + size jitter + 1 decoy number (×1.9)</li>
+              <li><b>Chaos</b>: + dense noise + 2 decoys + <span className="text-orange-500">orange cue</span> (×2.5)</li>
+            </ul>
+            <p>
+              <b className="text-foreground">📊 Scoring: </b>score = (1000 + speed bonus) × Df × Dc.
+              Df comes from the problem settings, Dc from the distraction level.
+            </p>
+            <p>
+              <b className="text-foreground">🏆 Two boards: </b>each exact setup has its own board (like for like),
+              plus the GFI overall board, which sums your best scores across setups (rewards variety).
+            </p>
+          </div>
+          ) : (
           <div className="mt-3 space-y-2.5 leading-relaxed text-muted-foreground">
             <p>
               <b className="text-foreground">🎯 目标：</b>在视觉/注意力干扰下完成闪电心算。
@@ -189,12 +230,13 @@ export function GauntletFlashGame({
               另有 GFI 通榜——汇总你所有配置的最佳分（鼓励多样化训练）。
             </p>
           </div>
+          )}
         </details>
 
         {/* 预设 */}
         <div>
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            一键预设
+            {L("一键预设", "Presets")}
           </div>
           <div className="grid grid-cols-4 gap-1.5">
             {PRESETS.map((p) => (
@@ -203,7 +245,7 @@ export function GauntletFlashGame({
                 onClick={() => setCfg(p.cfg)}
                 className="rounded-md border border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
               >
-                {p.name}
+                {lang === "en" ? PRESET_EN[p.id] ?? p.name : p.name}
               </button>
             ))}
           </div>
@@ -212,35 +254,35 @@ export function GauntletFlashGame({
         {/* 算式参数 */}
         <div className="space-y-3 rounded-md border border-border bg-card p-3">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            算式参数
+            {L("算式参数", "Problem")}
           </div>
-          <ParamRow label="笔数">
+          <ParamRow label={L("笔数", "Terms")}>
             {COUNT_OPTIONS.map((n) => (
               <Chip key={n} active={cfg.count === n} onClick={() => updateCfg({ count: n })}>
                 {n}
               </Chip>
             ))}
           </ParamRow>
-          <ParamRow label="位数">
+          <ParamRow label={L("位数", "Digits")}>
             {DIGIT_OPTIONS.map((n) => (
               <Chip key={n} active={cfg.digits === n} onClick={() => updateCfg({ digits: n })}>
                 {n}
               </Chip>
             ))}
           </ParamRow>
-          <ParamRow label="闪速">
+          <ParamRow label={L("闪速", "Speed")}>
             {SPEED_OPTIONS.map((n) => (
               <Chip key={n} active={cfg.speedMs === n} onClick={() => updateCfg({ speedMs: n })}>
                 {n}ms
               </Chip>
             ))}
           </ParamRow>
-          <ParamRow label="减法">
-            <Chip active={!cfg.includeSub} onClick={() => updateCfg({ includeSub: false })}>纯加</Chip>
-            <Chip active={cfg.includeSub} onClick={() => updateCfg({ includeSub: true })}>含减</Chip>
+          <ParamRow label={L("减法", "Sub")}>
+            <Chip active={!cfg.includeSub} onClick={() => updateCfg({ includeSub: false })}>{L("纯加", "Add only")}</Chip>
+            <Chip active={cfg.includeSub} onClick={() => updateCfg({ includeSub: true })}>{L("含减", "With sub")}</Chip>
           </ParamRow>
           <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
-            <span className="text-muted-foreground">算式难度 Df</span>
+            <span className="text-muted-foreground">{L("算式难度 Df", "Problem difficulty Df")}</span>
             <span className="font-mono-tabular font-semibold text-foreground">×{Df.toFixed(2)}</span>
           </div>
         </div>
@@ -248,7 +290,7 @@ export function GauntletFlashGame({
         {/* 干扰强度 */}
         <div className="space-y-3 rounded-md border border-border bg-card p-3">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            干扰强度
+            {L("干扰强度", "Distraction")}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {CHAOS_ORDER.map((id) => {
@@ -265,14 +307,14 @@ export function GauntletFlashGame({
                       : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
                   )}
                 >
-                  <div>{c.name}</div>
+                  <div>{lang === "en" ? CHAOS_EN[id]?.name ?? c.name : c.name}</div>
                   <div className="mt-0.5 font-mono-tabular text-[10px] opacity-70">×{c.multiplier}</div>
                 </button>
               );
             })}
           </div>
           <div className="text-[11px] leading-relaxed text-muted-foreground">
-            {chaos.desc}
+            {lang === "en" ? CHAOS_EN[cfg.chaos]?.desc ?? chaos.desc : chaos.desc}
           </div>
           <label className="flex items-start gap-2 cursor-pointer border-t border-border pt-2">
             <input
@@ -283,17 +325,17 @@ export function GauntletFlashGame({
             />
             <div className="flex-1">
               <div className="flex items-center gap-1 text-[11px] font-medium text-foreground">
-                额外启用闪屏间隔
+                {L("额外启用闪屏间隔", "Add blink gaps")}
                 <AlertTriangle className="h-3 w-3 text-amber-500" />
                 <span className="ml-1 font-mono-tabular text-[10px] text-primary">+0.20</span>
               </div>
               <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                数字之间穿插短暂闪屏，光敏体质请关闭。
+                {L("数字之间穿插短暂闪屏，光敏体质请关闭。", "Brief screen flashes between numbers. Leave off if you're sensitive to flashing light.")}
               </div>
             </div>
           </label>
           <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
-            <span className="text-muted-foreground">干扰系数 Dc</span>
+            <span className="text-muted-foreground">{L("干扰系数 Dc", "Distraction factor Dc")}</span>
             <span className="font-mono-tabular font-semibold text-foreground">×{Dc.toFixed(2)}</span>
           </div>
         </div>
@@ -301,17 +343,17 @@ export function GauntletFlashGame({
         {/* 总难度 + 预估分 */}
         <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-muted-foreground">总难度 D = Df × Dc</span>
+            <span className="text-muted-foreground">{L("总难度 D = Df × Dc", "Total difficulty D = Df × Dc")}</span>
             <span className="font-mono-tabular text-base font-semibold text-primary">×{D.toFixed(2)}</span>
           </div>
           <div className="mt-1.5 flex items-center justify-between border-t border-primary/20 pt-1.5">
-            <span className="text-[11px] text-muted-foreground">本局答对最高可得</span>
-            <span className="font-mono-tabular text-lg font-semibold text-primary">{maxScore} 分</span>
+            <span className="text-[11px] text-muted-foreground">{L("本局答对最高可得", "Max score if correct")}</span>
+            <span className="font-mono-tabular text-lg font-semibold text-primary">{maxScore} {L("分", "pts")}</span>
           </div>
         </div>
 
         <Button onClick={begin}>
-          <Play className="mr-2 h-3.5 w-3.5" /> 开始挑战
+          <Play className="mr-2 h-3.5 w-3.5" /> {L("开始挑战", "Start")}
         </Button>
       </div>
     );
@@ -321,10 +363,10 @@ export function GauntletFlashGame({
     return (
       <div className="flex h-[360px] flex-col items-center justify-center">
         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-          {chaos.name} · D=×{D.toFixed(2)}
+          {lang === "en" ? CHAOS_EN[cfg.chaos]?.name ?? chaos.name : chaos.name} · D=×{D.toFixed(2)}
         </div>
         <div className="font-mono-tabular text-7xl font-semibold text-primary animate-pop-in">GO</div>
-        <div className="mt-3 text-xs text-muted-foreground">注意力集中，准备追踪</div>
+        <div className="mt-3 text-xs text-muted-foreground">{L("注意力集中，准备追踪", "Focus. Get ready to track")}</div>
       </div>
     );
   }
@@ -337,9 +379,9 @@ export function GauntletFlashGame({
     return (
       <div className="flex flex-col items-center gap-3">
         <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground">
-          <span className="font-mono-tabular">{cfg.count}×{cfg.digits} · {cfg.speedMs}ms · {chaos.name}</span>
+          <span className="font-mono-tabular">{cfg.count}×{cfg.digits} · {cfg.speedMs}ms · {lang === "en" ? CHAOS_EN[cfg.chaos]?.name ?? chaos.name : chaos.name}</span>
           <span className="font-mono-tabular">{realTermPassed} / {totalRealTerms}</span>
-          <button onClick={reset} className="hover:text-destructive">放弃</button>
+          <button onClick={reset} className="hover:text-destructive">{L("放弃", "Quit")}</button>
         </div>
         <div className="h-px w-full bg-border">
           <div
@@ -355,23 +397,23 @@ export function GauntletFlashGame({
   if (phase === "answer" && problem) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">输入答案</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("输入答案", "Enter your answer")}</div>
         <Input
           autoFocus
           inputMode="numeric"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && input.trim() && submit(input)}
-          placeholder="键入最终结果"
+          placeholder={L("键入最终结果", "Type the final result")}
           className="h-14 max-w-sm rounded-md border-border text-center font-mono-tabular text-2xl"
         />
         <div className="flex w-full max-w-sm gap-2">
           <Button onClick={() => submit(input)} disabled={!input.trim()} className="flex-1">
-            提交
+            {L("提交", "Submit")}
           </Button>
         </div>
         <button onClick={reset} className="text-[11px] text-muted-foreground hover:text-foreground">
-          放弃本局
+          {L("放弃本局", "Quit this round")}
         </button>
       </div>
     );
@@ -392,7 +434,7 @@ export function GauntletFlashGame({
         </div>
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {result.correct ? "完成" : "错误"}
+            {result.correct ? L("完成", "Done") : L("错误", "Wrong")}
           </div>
           <div className="mt-0.5 font-mono-tabular text-5xl font-semibold text-foreground">
             {result.correct ? `+${result.score}` : "0"}
@@ -412,11 +454,11 @@ export function GauntletFlashGame({
           )}
         </div>
         <div className="w-full rounded-md border border-border p-3 text-center">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">正确答案</div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{L("正确答案", "Correct answer")}</div>
           <div className="my-0.5 font-mono-tabular text-2xl font-semibold">{result.expected}</div>
           {!result.correct && (
             <div className="text-[11px] text-muted-foreground">
-              你的回答 <span className="font-mono-tabular font-medium text-destructive">{result.answered}</span>
+              {L("你的回答", "Your answer")} <span className="font-mono-tabular font-medium text-destructive">{result.answered}</span>
             </div>
           )}
           <div className="mt-2 border-t border-border pt-2 font-mono-tabular text-[11px] text-muted-foreground break-all">
@@ -432,10 +474,10 @@ export function GauntletFlashGame({
         </div>
         <div className="flex w-full gap-2">
           <Button variant="outline" onClick={reset} className="flex-1" size="sm">
-            改参数
+            {L("改参数", "Settings")}
           </Button>
           <Button onClick={begin} className="flex-1" size="sm">
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> 再来一局
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {L("再来一局", "Play again")}
           </Button>
         </div>
       </div>
@@ -578,7 +620,6 @@ function Stage({ item, chaos }: { item: FlashItem; chaos: ChaosSpec }) {
             <Minus
               className={cn(
                 "text-background/80",
-                item.colorClass === "orange" && "text-orange-400",
               )}
               strokeWidth={3}
               style={{ width: 48 * (item.fontScale ?? 1), height: 48 * (item.fontScale ?? 1) }}

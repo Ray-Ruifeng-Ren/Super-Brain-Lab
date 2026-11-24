@@ -14,7 +14,7 @@ const CHAR_FIT = "scale(1.4) translateX(18%)";
 export const CALM_BG = "calm";
 
 export const FLASH_BG_OPTIONS: BgOption[] = [
-  { id: "calm", label: "安静", url: CALM_BG, emoji: "🌙", hue: 38 },                  // 默认:无视频、极简
+  { id: "calm", label: "安静", url: CALM_BG, emoji: "🌙", hue: 214 },                  // 默认:无视频、极简
   { id: "spark", label: "火花", url: "/flash-bg.mp4", emoji: "🔥", hue: 34 },       // 暖金/橙(已预先右移取景)
   { id: "valley", label: "山谷", url: "/hero-cinematic.mp4", emoji: "🏞️", hue: 130 }, // 绿(风景,保持全景)
   { id: "cat", label: "喵喵", url: pub("喵喵.mp4"), emoji: "🐱", hue: 22, transform: CHAR_FIT },
@@ -27,7 +27,7 @@ export const FLASH_BG_OPTIONS: BgOption[] = [
   { id: "abu", label: "阿布", url: pub("阿布.mp4"), emoji: "✨", hue: 280, transform: CHAR_FIT },
 ];
 
-export const DEFAULT_FLASH_HUE = 38; // 默认暖金
+export const DEFAULT_FLASH_HUE = 214; // 默认蓝
 
 /** 当前所选背景对应的光标粒子色相(用于让鼠标光效随背景变调)。 */
 export function getFlashBgHue(): number {

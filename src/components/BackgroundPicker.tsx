@@ -4,23 +4,29 @@ import { ImageIcon, Check } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { FLASH_BG_OPTIONS, getFlashBg, setFlashBg } from "@/lib/flashBackground";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
+
+// 背景名英文(按 id;没收录的沿用中文名)
+const BG_EN: Record<string, string> = { calm: "Calm", spark: "Spark", valley: "Valley", cat: "Kitty", frog: "Froggy", rabbit: "Spring Bunny", water: "Aqua", shark: "Butterfly Shark", mecha: "Mecha Kid", dimo: "Dimo", abu: "Abu" };
 
 export function BackgroundPicker() {
+  const { lang } = useI18n();
+  const en = lang === "en";
   const [cur, setCur] = useState<string>(getFlashBg);
   const choose = (url: string) => { setFlashBg(url); setCur(url); };
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
-          title="选择背景"
-          aria-label="选择背景"
+          title={en ? "Choose background" : "选择背景"}
+          aria-label={en ? "Choose background" : "选择背景"}
           className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:text-foreground"
         >
           <ImageIcon className="h-4 w-4" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-60 p-2">
-        <div className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">选择背景</div>
+        <div className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{en ? "Background" : "选择背景"}</div>
         <div className="grid grid-cols-2 gap-1.5">
           {FLASH_BG_OPTIONS.map((o) => {
             const active = cur === o.url;
@@ -34,13 +40,13 @@ export function BackgroundPicker() {
                 )}
               >
                 <span className="text-sm leading-none">{o.emoji}</span>
-                <span className="truncate">{o.label}</span>
+                <span className="truncate">{en ? BG_EN[o.id] ?? o.label : o.label}</span>
                 {active && <Check className="ml-auto h-3 w-3 shrink-0" />}
               </button>
             );
           })}
         </div>
-        <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">部分视频较大,首次加载稍等片刻;设置仅在本设备生效。</p>
+        <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">{en ? "Some videos are large and may take a moment to load the first time. This setting applies to this device only." : "部分视频较大,首次加载稍等片刻;设置仅在本设备生效。"}</p>
       </PopoverContent>
     </Popover>
   );

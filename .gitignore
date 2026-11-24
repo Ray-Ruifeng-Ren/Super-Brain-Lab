@@ -22,3 +22,24 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Netlify folder
+.netlify
+netlify/functions/_secrets.mjs
+
+# 2026-11-24 推 GitHub 前补的忽略项:大媒体不进仓库(词块音频库 236MB+、背景视频几十 MB,GitHub 单文件 100MB 上限、仓库体积),
+# 它们由 ~/Dev/sbl-app 构建发布到 Netlify;scratchpad 是会话草稿(含报价/反馈截图),.claude 是本机会话配置
+public/tts-bank/
+public/tts-bank2/
+public/tts-bank3/
+public/tts-bank4/
+public/tts-bank5/
+public/tts-bank6/
+public/tts-audition/
+public/*.mp4
+scratchpad/
+app-www/
+.claude/
+server/secrets.env
+*.bak.*
+deploy-files.json

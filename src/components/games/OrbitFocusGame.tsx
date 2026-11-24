@@ -8,6 +8,11 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { submitScore, submitOrbitOverall, ORBIT_LEVEL_WEIGHTS } from "@/lib/leaderboard";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 type Phase = "idle" | "marking" | "tracking" | "snapshot" | "stroop" | "gonogo" | "result";
 type EventKind = "snapshot" | "stroop" | "gonogo";
@@ -62,6 +67,10 @@ const STROOP_COLORS = [
   { name: "黄", hex: "#eab308" },
 ];
 
+// Stroop 颜色名:内部按中文 name 判对错,只在显示时换英文
+const COLOR_EN: Record<string, string> = { 红: "Red", 蓝: "Blue", 绿: "Green", 黄: "Yellow" };
+const colorLabel = (name: string) => (getLang() === "en" ? COLOR_EN[name] ?? name : name);
+
 const W = 560;
 const H = 420;
 const CENTER = { x: W / 2, y: H / 2 };
@@ -108,6 +117,7 @@ interface EventResult {
 }
 
 export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
+  const { lang } = useI18n();
   const { user } = useAuth();
   const [levelIdx, setLevelIdx] = useState(0);
   const cfg = LEVELS[levelIdx];
@@ -353,7 +363,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
       });
       if (r.ok) {
         pfi = await submitOrbitOverall(user.id);
-        toast.success(`本局 ${score} 分 · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`);
+        toast.success(`${L(`本局 ${score} 分`, `Score ${score}`)} · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`);
       }
     }
     setResult({ score, accuracy, avgRt, stars, pfi });
@@ -378,7 +388,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
     <div className="space-y-5">
       {/* 难度选择 */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">等级</span>
+        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{L("等级", "Level")}</span>
         {LEVELS.map((l, i) => (
           <button
             key={l.level}
@@ -398,10 +408,10 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
 
       {/* 配置摘要 */}
       <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-        <Stat label="圆点" value={`${cfg.total}`} />
-        <Stat label="目标" value={`${cfg.targets}`} />
-        <Stat label="时长" value={`${Math.round(cfg.trackingMs / 1000)}s`} />
-        <Stat label="权重" value={`×${ORBIT_LEVEL_WEIGHTS[cfg.level - 1].toFixed(1)}`} />
+        <Stat label={L("圆点", "Dots")} value={`${cfg.total}`} />
+        <Stat label={L("目标", "Targets")} value={`${cfg.targets}`} />
+        <Stat label={L("时长", "Duration")} value={`${Math.round(cfg.trackingMs / 1000)}s`} />
+        <Stat label={L("权重", "Weight")} value={`×${ORBIT_LEVEL_WEIGHTS[cfg.level - 1].toFixed(1)}`} />
       </div>
 
       {/* 画布 */}
@@ -455,7 +465,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
             <g>
               <rect x={0} y={0} width={W} height={H} fill="hsl(var(--primary))" opacity={0.04} />
               <text x={CENTER.x} y={28} textAnchor="middle" fontSize={14} fontWeight={700} fill="hsl(var(--primary))" letterSpacing={3}>
-                STOP · 点出所有目标
+                {L("STOP · 点出所有目标", "STOP · tap all targets")}
               </text>
             </g>
           )}
@@ -464,9 +474,9 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
         {/* Stroop 中央覆盖层 */}
         {phase === "stroop" && stroopPrompt && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">这个字 · 是什么颜色</div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{L("这个字 · 是什么颜色", "What color is this word?")}</div>
             <div className="mt-2 font-display text-6xl font-bold" style={{ color: stroopPrompt.color }}>
-              {stroopPrompt.word}
+              {colorLabel(stroopPrompt.word)}
             </div>
             <div className="mt-4 flex gap-2">
               {STROOP_COLORS.map((c) => (
@@ -476,7 +486,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
                   className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium transition-transform hover:scale-105"
                   style={{ color: c.hex }}
                 >
-                  {c.name}
+                  {colorLabel(c.name)}
                 </button>
               ))}
             </div>
@@ -486,7 +496,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
         {/* Go/NoGo */}
         {phase === "gonogo" && gonogoPrompt && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">看到 ✓ 立即点击 · ✗ 不要动</div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{L("看到 ✓ 立即点击 · ✗ 不要动", "✓ tap now · ✗ don't move")}</div>
             <button
               onClick={handleGo}
               className="mt-3 flex h-24 w-24 items-center justify-center rounded-full border-2 border-border bg-card font-display text-5xl font-bold transition-transform active:scale-95"
@@ -500,14 +510,14 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
         {/* 结果 */}
         {phase === "result" && result && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">本局得分</div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{L("本局得分", "Score")}</div>
             <div className="mt-1 font-mono-tabular text-5xl font-bold text-primary">{result.score}</div>
             <div className="mt-1 text-2xl tracking-wider" style={{ color: "hsl(var(--primary))" }}>
               {"★".repeat(result.stars)}<span className="text-muted-foreground/40">{"★".repeat(3 - result.stars)}</span>
             </div>
             <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-              <span>准确率 {Math.round(result.accuracy * 100)}%</span>
-              <span>平均反应 {Math.round(result.avgRt)}ms</span>
+              <span>{L("准确率", "Accuracy")} {Math.round(result.accuracy * 100)}%</span>
+              <span>{L("平均反应", "Avg reaction")} {Math.round(result.avgRt)}ms</span>
             </div>
             {result.pfi !== undefined && (
               <div className="mt-2 flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary">
@@ -519,14 +529,14 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
                 onClick={() => { reset(); startGame(); }}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
               >
-                再来一局
+                {L("再来一局", "Play again")}
               </button>
               {levelIdx < LEVELS.length - 1 && result.stars >= 2 && (
                 <button
                   onClick={() => { setLevelIdx(levelIdx + 1); reset(); }}
                   className="rounded-md border border-border px-4 py-2 text-sm font-medium"
                 >
-                  下一等级 →
+                  {L("下一等级 →", "Next level →")}
                 </button>
               )}
             </div>
@@ -536,22 +546,22 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
         {phase === "idle" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95">
             <Target className="h-8 w-8 text-primary" />
-            <h3 className="mt-3 font-display text-xl">L{cfg.level} · 轨道追焦</h3>
+            <h3 className="mt-3 font-display text-xl">L{cfg.level} · {L("轨道追焦", "Orbit Focus")}</h3>
             <p className="mt-1 max-w-xs text-center text-xs text-muted-foreground">
-              先记住高亮的 {cfg.targets} 个目标，开始后用眼睛盯住它们，并应对中央出现的挑战。
+              {L(`先记住高亮的 ${cfg.targets} 个目标，开始后用眼睛盯住它们，并应对中央出现的挑战。`, `Memorize the ${cfg.targets} highlighted targets, then track them with your eyes and respond to challenges in the center.`)}
             </p>
             <button
               onClick={startGame}
               className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
             >
-              <Play className="h-3.5 w-3.5" /> 开始
+              <Play className="h-3.5 w-3.5" /> {L("开始", "Start")}
             </button>
           </div>
         )}
 
         {phase === "marking" && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
-            记住高亮目标
+            {L("记住高亮目标", "Memorize the highlighted targets")}
           </div>
         )}
       </div>
@@ -560,30 +570,31 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
       {(phase === "tracking" || phase === "snapshot" || phase === "stroop" || phase === "gonogo") && (
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
-            事件 {events.length} · 命中 {events.filter((e) => e.correct).length}
+            {L("事件", "Events")} {events.length} · {L("命中", "Hits")} {events.filter((e) => e.correct).length}
           </span>
           <button
             onClick={() => { reset(); }}
             className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
           >
-            <Square className="h-3 w-3" /> 中止
+            <Square className="h-3 w-3" /> {L("中止", "Stop")}
           </button>
         </div>
       )}
 
       {!user && (
-        <p className="text-center text-[11px] text-muted-foreground">登录后成绩自动同步到独立等级榜与 PFI 通榜</p>
+        <p className="text-center text-[11px] text-muted-foreground">{L("登录后成绩自动同步到独立等级榜与 PFI 通榜", "Log in to sync scores to the per-level boards and the PFI overall board")}</p>
       )}
 
       {/* 详细玩法说明 */}
       <details className="group rounded-lg border border-border bg-card/40 px-4 py-3 text-sm">
         <summary className="flex cursor-pointer items-center justify-between font-medium text-foreground">
           <span className="inline-flex items-center gap-2">
-            <Target className="h-4 w-4 text-primary" /> 玩法详细说明
+            <Target className="h-4 w-4 text-primary" /> {L("玩法详细说明", "How to play")}
           </span>
           <span className="text-xs text-muted-foreground transition-transform group-open:rotate-180">▾</span>
         </summary>
 
+        {lang === "en" ? <OrbitHelpEn /> : (
         <div className="mt-4 space-y-5 text-[13px] leading-relaxed text-muted-foreground">
           <section>
             <h4 className="mb-1 font-semibold text-foreground">🎯 游戏目标</h4>
@@ -652,6 +663,7 @@ export function OrbitFocusGame({ onFinished }: { onFinished?: () => void }) {
             </ul>
           </section>
         </div>
+        )}
       </details>
     </div>
   );
@@ -662,6 +674,74 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border border-border bg-card px-2.5 py-1.5">
       <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
       <div className="font-mono-tabular text-sm font-semibold">{value}</div>
+    </div>
+  );
+}
+
+// 玩法说明(英文版,内容与中文版一致)
+function OrbitHelpEn() {
+  return (
+    <div className="mt-4 space-y-5 text-[13px] leading-relaxed text-muted-foreground">
+      <section>
+        <h4 className="mb-1 font-semibold text-foreground">🎯 Goal</h4>
+        <p>
+          While dots race around their orbits, <strong className="text-foreground">keep your eyes on the highlighted targets</strong>,
+          and respond correctly to the “challenges” that pop up in the center. It combines
+          <strong className="text-foreground"> eye-movement training (saccades / smooth pursuit)</strong> with
+          <strong className="text-foreground"> sustained attention</strong>.
+        </p>
+      </section>
+      <section>
+        <h4 className="mb-1 font-semibold text-foreground">🕹 How a round works</h4>
+        <ol className="ml-5 list-decimal space-y-1">
+          <li><strong className="text-foreground">Memorize</strong>: for about 2 seconds some dots are highlighted. Those are your targets.</li>
+          <li><strong className="text-foreground">Track</strong>: all dots turn the same color and move along their orbits. Follow the targets with your eyes (not the mouse).</li>
+          <li><strong className="text-foreground">Challenges</strong>: one of three challenges pops up in the center at random. React right away.</li>
+          <li><strong className="text-foreground">Results</strong>: after the round you get a score, hit rate, average reaction time and stars.</li>
+        </ol>
+      </section>
+      <section>
+        <h4 className="mb-2 font-semibold text-foreground">⚡ Three challenges</h4>
+        <div className="space-y-2">
+          <div className="rounded-md border border-border bg-background/40 p-2.5">
+            <div className="font-medium text-foreground">📸 Snapshot</div>
+            <p className="mt-0.5">All dots freeze. <strong>Tap every dot you think is a target</strong>. Wrong or missed taps cost points.</p>
+          </div>
+          <div className="rounded-md border border-border bg-background/40 p-2.5">
+            <div className="font-medium text-foreground">🎨 Stroop</div>
+            <p className="mt-0.5">A color word appears in a different color (e.g. “Blue” written in red). Pick
+              <strong> the color of the ink</strong>, not what the word says.</p>
+          </div>
+          <div className="rounded-md border border-border bg-background/40 p-2.5">
+            <div className="font-medium text-foreground">✓✗ Go / NoGo</div>
+            <p className="mt-0.5">See <strong>✓</strong>: tap at once. See <strong>✗</strong>: <strong>don't tap</strong>, wait for it to disappear. Wrong taps cost points.</p>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h4 className="mb-1 font-semibold text-foreground">📈 Levels (L1–L10)</h4>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>Higher levels: <strong className="text-foreground">more orbits, more dots, more targets, more speed</strong>.</li>
+          <li>From L4 dots <strong>reverse direction</strong>, from L6 they <strong>flicker</strong>, and from L8 orbits <strong>cross and overlap</strong>.</li>
+          <li>Challenges come faster with shorter windows at every level. Unlock levels in order; jumping straight to L10 isn't recommended.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 className="mb-1 font-semibold text-foreground">🏆 Two leaderboards</h4>
+        <ul className="ml-5 list-disc space-y-1">
+          <li><strong className="text-foreground">Level boards (L1–L10)</strong>: one board per level for your best single round.</li>
+          <li><strong className="text-foreground">PFI overall (Personal Focus Index)</strong>: a <em>weighted sum</em> of your best score at each level; higher levels weigh more. To climb it you need strong scores on every level; farming easy levels won't work.</li>
+          <li>Three-star rounds earn an extra <strong>×1.15</strong> PFI bonus.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 className="mb-1 font-semibold text-foreground">💡 Tips</h4>
+        <ul className="ml-5 list-disc space-y-1">
+          <li>Rest your gaze slightly behind the center and <strong>use peripheral vision</strong>. Don't chase single dots with your head.</li>
+          <li>When a challenge pops up, handle the center first, then return to tracking. That switch is the core skill.</li>
+          <li>5–10 minutes a day, 3–5 rounds a session is plenty. Don't push hard levels when tired.</li>
+        </ul>
+      </section>
     </div>
   );
 }

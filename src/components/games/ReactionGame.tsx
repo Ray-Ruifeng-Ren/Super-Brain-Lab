@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { submitScore } from "@/lib/leaderboard";
 import { Zap } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 type Phase = "idle" | "waiting" | "ready" | "result" | "tooSoon";
 
 export function ReactionGame({ onFinished }: { onFinished?: () => void }) {
+  useI18n();
   const [phase, setPhase] = useState<Phase>("idle");
   const [ms, setMs] = useState(0);
   const [attempts, setAttempts] = useState<number[]>([]);
@@ -62,36 +68,36 @@ export function ReactionGame({ onFinished }: { onFinished?: () => void }) {
       >
         {phase === "idle" && (
           <div className="text-center">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">点击开始</div>
-            <div className="mt-2 font-display text-3xl">屏幕变绿后立刻点击</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("点击开始", "Click to start")}</div>
+            <div className="mt-2 font-display text-3xl">{L("屏幕变绿后立刻点击", "Click the moment it turns green")}</div>
           </div>
         )}
         {phase === "waiting" && (
           <div className="text-center">
-            <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">等待</div>
-            <div className="mt-2 font-display text-3xl">不要抢跑</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">{L("等待", "Wait")}</div>
+            <div className="mt-2 font-display text-3xl">{L("不要抢跑", "Don't jump the gun")}</div>
           </div>
         )}
         {phase === "ready" && (
           <div className="text-center animate-pop-in">
             <Zap className="mx-auto mb-2 h-12 w-12" strokeWidth={2} />
-            <div className="font-display text-4xl">现在</div>
+            <div className="font-display text-4xl">{L("现在", "NOW")}</div>
           </div>
         )}
         {phase === "result" && (
           <div className="text-center animate-pop-in">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">反应时间</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("反应时间", "Reaction time")}</div>
             <div className="font-mono-tabular text-7xl font-semibold leading-none my-2 text-primary">
               {Math.round(ms)}
               <span className="text-2xl text-muted-foreground"> ms</span>
             </div>
-            <div className="mt-2 text-sm text-muted-foreground">点击再玩一次</div>
+            <div className="mt-2 text-sm text-muted-foreground">{L("点击再玩一次", "Click to play again")}</div>
           </div>
         )}
         {phase === "tooSoon" && (
           <div className="text-center animate-pop-in">
-            <div className="font-display text-3xl">抢跑了</div>
-            <div className="mt-1 text-sm opacity-90">点击重新开始</div>
+            <div className="font-display text-3xl">{L("抢跑了", "Too soon!")}</div>
+            <div className="mt-1 text-sm opacity-90">{L("点击重新开始", "Click to restart")}</div>
           </div>
         )}
       </button>
@@ -99,9 +105,9 @@ export function ReactionGame({ onFinished }: { onFinished?: () => void }) {
       {attempts.length > 0 && (
         <div className="rounded-md border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">最近 5 次</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("最近 5 次", "Last 5")}</span>
             <span className="text-xs text-muted-foreground">
-              平均 <span className="font-mono-tabular font-medium text-foreground">{Math.round(avg)} ms</span>
+              {L("平均", "Avg")} <span className="font-mono-tabular font-medium text-foreground">{Math.round(avg)} ms</span>
             </span>
           </div>
           <div className="flex gap-1.5">
@@ -114,7 +120,7 @@ export function ReactionGame({ onFinished }: { onFinished?: () => void }) {
         </div>
       )}
 
-      <div className="text-center text-[11px] text-muted-foreground">优秀 &lt; 200ms · 顶尖 &lt; 150ms</div>
+      <div className="text-center text-[11px] text-muted-foreground">{L("优秀 < 200ms · 顶尖 < 150ms", "Great < 200ms · Elite < 150ms")}</div>
     </div>
   );
 }

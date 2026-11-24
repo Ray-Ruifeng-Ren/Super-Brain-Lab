@@ -71,6 +71,32 @@ export async function fetchAttempts(game: string): Promise<AttemptRow[]> {
   return all;
 }
 
+/** 云端陪练答题序列(按时间正序,解析出关卡号)—— 账号级陪练进度重建用。未登录 → 空。 */
+export async function fetchCoachSeq(): Promise<{ stage: number; correct: boolean }[]> {
+  const { data: s } = await supabase.auth.getSession();
+  const uid = s.session?.user?.id;
+  if (!uid) return [];
+  const PAGE = 1000; // PostgREST 单次响应 1000 行上限,必须翻页
+  const out: { stage: number; correct: boolean }[] = [];
+  for (let i = 0; i < 30; i++) {
+    const { data, error } = await supabase
+      .from("practice_attempts")
+      .select("mode,correct,created_at")
+      .eq("user_id", uid)
+      .eq("game", "flashmath")
+      .like("mode", "%-coach-s%")
+      .order("created_at", { ascending: true })
+      .range(i * PAGE, i * PAGE + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    for (const r of data as { mode: string; correct: boolean }[]) {
+      const m = String(r.mode).match(/-coach-s(\d+)-\d+q$/); // -retry 后缀(重练)天然不匹配,不计入进度
+      if (m) out.push({ stage: Number(m[1]), correct: !!r.correct });
+    }
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
 /** Fetch most recent wrong attempts (for replay). */
 export async function fetchWrongAttempts(game: string, limit = 1000): Promise<AttemptRow[]> {
   const { data: auth } = await supabase.auth.getUser();

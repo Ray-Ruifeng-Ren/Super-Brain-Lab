@@ -12,6 +12,11 @@ import { submitScore } from "@/lib/leaderboard";
 import { Play, RotateCcw, Settings2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 type Phase = "config" | "ready" | "playing" | "result";
 
@@ -67,6 +72,7 @@ function NumInput({
 }
 
 export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void; onCfgChange?: (c: Cfg) => void }) {
+  useI18n();
   const [cfg, setCfg] = useState<Cfg>(DEFAULT);
   const [phase, setPhase] = useState<Phase>("config");
   const [seq, setSeq] = useState<Step[]>([]);
@@ -123,7 +129,7 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
         meta: { hits, misses, falseAlarms, intervalMs: cfg.intervalMs },
       }).then((r) => {
         if (!r.ok && r.error === "未登录") {
-          toast({ title: "登录后即可上榜", description: "本局成绩未保存到云端。" });
+          toast({ title: L("登录后即可上榜", "Log in to get on the leaderboard"), description: L("本局成绩未保存到云端。", "This score wasn't saved to the cloud.") });
         }
       });
       onFinished?.();
@@ -172,18 +178,18 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">N-Back 配置</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{L("N-Back 配置", "N-Back settings")}</span>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <Cell label="N" hint="1 – 5"><NumInput value={cfg.n} onChange={(n) => setCfg({ ...cfg, n })} min={1} max={5} /></Cell>
-          <Cell label="题数" hint="10 – 60"><NumInput value={cfg.trials} onChange={(v) => setCfg({ ...cfg, trials: v })} min={10} max={60} /></Cell>
-          <Cell label="间隔" hint="ms"><NumInput value={cfg.intervalMs} onChange={(v) => setCfg({ ...cfg, intervalMs: v })} min={1200} max={4000} suffix="ms" /></Cell>
+          <Cell label={L("题数", "Trials")} hint="10 – 60"><NumInput value={cfg.trials} onChange={(v) => setCfg({ ...cfg, trials: v })} min={10} max={60} /></Cell>
+          <Cell label={L("间隔", "Interval")} hint="ms"><NumInput value={cfg.intervalMs} onChange={(v) => setCfg({ ...cfg, intervalMs: v })} min={1200} max={4000} suffix="ms" /></Cell>
         </div>
         <div className="rounded-md border border-border bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          盯住 3×3 网格，方块依次在 9 个格子里闪现。<br />
-          当当前位置和 <span className="font-mono-tabular font-semibold text-foreground">{cfg.n}</span> 步之前的位置相同时，按 <kbd className="rounded border border-border bg-background px-1 font-mono-tabular text-[10px]">SPACE</kbd> 或屏幕按钮。
+          {L("盯住 3×3 网格，方块依次在 9 个格子里闪现。", "Watch the 3×3 grid: a square lights up in one of the 9 cells at a time.")}<br />
+          {L("当当前位置和", "When the current position matches the one")} <span className="font-mono-tabular font-semibold text-foreground">{cfg.n}</span> {L("步之前的位置相同时，按", "steps back, press")} <kbd className="rounded border border-border bg-background px-1 font-mono-tabular text-[10px]">SPACE</kbd> {L("或屏幕按钮。", "or the on-screen button.")}
         </div>
-        <Button onClick={begin}><Play className="mr-2 h-3.5 w-3.5" /> 开始挑战</Button>
+        <Button onClick={begin}><Play className="mr-2 h-3.5 w-3.5" /> {L("开始挑战", "Start")}</Button>
       </div>
     );
   }
@@ -191,7 +197,7 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
   if (phase === "ready") {
     return (
       <div className="flex h-[320px] flex-col items-center justify-center">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">准备</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">{L("准备", "Ready")}</div>
         <div className="font-mono-tabular text-7xl font-semibold text-primary animate-pop-in">GO</div>
       </div>
     );
@@ -205,7 +211,7 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
         <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground">
           <span className="font-mono-tabular">{Math.min(step + 1, seq.length)} / {seq.length}</span>
           <span className="font-mono-tabular text-foreground/70">{cfg.n}-Back</span>
-          <button onClick={reset} className="hover:text-destructive">放弃</button>
+          <button onClick={reset} className="hover:text-destructive">{L("放弃", "Quit")}</button>
         </div>
         <div className="h-px w-full bg-border">
           <div className="h-px bg-primary transition-all duration-150" style={{ width: `${((step + 1) / seq.length) * 100}%` }} />
@@ -228,7 +234,7 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
           disabled={justPressed}
           className="h-14 w-full max-w-[320px] font-mono-tabular text-base"
         >
-          {justPressed ? "已标记" : "MATCH (Space)"}
+          {justPressed ? L("已标记", "Marked") : "MATCH (Space)"}
         </Button>
       </div>
     );
@@ -246,20 +252,20 @@ export function NBackGame({ onFinished, onCfgChange }: { onFinished?: () => void
           {score.pct >= 70 ? <Check className="h-7 w-7" strokeWidth={2.5} /> : <X className="h-7 w-7" strokeWidth={2.5} />}
         </div>
         <div className="text-center">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">命中率</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("命中率", "Accuracy")}</div>
           <div className="mt-0.5 font-mono-tabular text-5xl font-semibold text-primary">{score.pct}%</div>
         </div>
         <div className="grid w-full grid-cols-3 gap-2 text-center">
-          <Stat label="命中" value={`${score.hits}/${score.opp}`} />
-          <Stat label="漏报" value={String(score.misses)} />
-          <Stat label="误报" value={String(score.falseAlarms)} />
+          <Stat label={L("命中", "Hits")} value={`${score.hits}/${score.opp}`} />
+          <Stat label={L("漏报", "Misses")} value={String(score.misses)} />
+          <Stat label={L("误报", "False alarms")} value={String(score.falseAlarms)} />
         </div>
         <div className="flex w-full gap-2">
           <Button variant="outline" onClick={reset} className="flex-1" size="sm">
-            <Settings2 className="mr-1.5 h-3.5 w-3.5" /> 改配置
+            <Settings2 className="mr-1.5 h-3.5 w-3.5" /> {L("改配置", "Settings")}
           </Button>
           <Button onClick={begin} className="flex-1" size="sm">
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> 再来
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {L("再来", "Again")}
           </Button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { withCors } from "./_cors.mjs";
 // 云端语音识别:浏览器上传录音 → 本函数转发到 OpenAI Whisper → 返回文本。
 // 浏览器只跟自己的站点通信,识别在服务端完成,任何设备/网络(含国内)均可用,绕过 Google 语音服务封锁。
 // 需在 Netlify 环境变量配置 OPENAI_API_KEY。
@@ -8,11 +9,11 @@ const json = (statusCode, obj) => ({
   body: JSON.stringify(obj),
 });
 
-export const handler = async (event) => {
+const inner = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method Not Allowed" });
 
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return json(500, { error: "服务端未配置 OPENAI_API_KEY(请在 Netlify 站点环境变量里添加)。" });
+  const key = process.env.OPENAI_API_KEY || process.env.openaiAPI;
+  if (!key) return json(500, { error: "服务端未配置 OPENAI_API_KEY / openaiAPI(请在 Netlify 站点环境变量里添加)。" });
 
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "请求体解析失败" }); }
@@ -49,3 +50,5 @@ export const handler = async (event) => {
   const data = await r.json().catch(() => ({}));
   return json(200, { text: (data.text || "").trim() });
 };
+
+export const handler = withCors(inner);

@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { detectLang } from "@/lib/langState";
+import { setCurrentLang } from "@/lib/langState";
 
 export type Lang = "zh" | "en";
 
@@ -11,7 +13,7 @@ const DICT = {
     hero_h1_b: "人类认知的边界。",
     hero_headline: "量化认知的边界。",
     hero_sub: "为聪明的头脑、无畏的探索者、专注的灵魂，构筑深度训练与心流之地。",
-    hero_desc: "Super Brain Lab 是一座面向认知极限的研究型训练场。专注、速算、记忆、反应——每一笔成绩被记录，每一次进步可比较。",
+    hero_desc: "珠象是一座面向认知极限的研究型训练场。专注、速算、记忆、反应——每一笔成绩被记录，每一次进步可比较。",
     modules_meta: "EST. 2026 · CONSORTIUM",
     start: "开始",
     begin_journey: "进入实验室",
@@ -30,7 +32,7 @@ const DICT = {
     voice_d: "解放双手，模拟真实赛场计时与作答方式。",
     sci: "科学出题",
     sci_d: "每位 0–9 均匀分布、单笔无重复，达到专业珠心算标准。",
-    footer: "© Super Brain Lab · 登录后成绩自动同步到云端",
+    footer: "© 珠象 · 登录后成绩自动同步到云端",
     coauthor: "由速算世界冠军 × 麻省理工学院 联合研发",
     coauthor_sub: "World Mental-Calc Champion × MIT · Cognitive Performance Lab",
     tag_voice: "语音作答",
@@ -57,7 +59,7 @@ const DICT = {
     hero_h1_b: "the limits of human cognition.",
     hero_headline: "Quantify the limits of cognition.",
     hero_sub: "A research-grade arena for brilliant minds, fearless makers and thoughtful souls — where deep work meets pure flow.",
-    hero_desc: "Super Brain Lab is a research-grade training ground for cognitive performance. Focus, calc, memory, reaction — every score logged, every gain comparable.",
+    hero_desc: "Zhuxiang is a research-grade training ground for cognitive performance. Focus, calc, memory, reaction — every score logged, every gain comparable.",
     modules_meta: "EST. 2026 · CONSORTIUM",
     start: "Start",
     begin_journey: "Begin Journey",
@@ -76,7 +78,7 @@ const DICT = {
     voice_d: "Hands-free, simulating a real competition timing & answer flow.",
     sci: "Scientific Problems",
     sci_d: "Uniform 0–9 per digit, no repeats per stroke — professional abacus standard.",
-    footer: "© Super Brain Lab · Scores auto-sync to cloud after login",
+    footer: "© Zhuxiang · Scores auto-sync to cloud after login",
     coauthor: "Co-developed by a World Mental-Calc Champion × MIT",
     coauthor_sub: "Cognitive Performance Lab · Backed by competition data",
     tag_voice: "Voice answer",
@@ -108,13 +110,13 @@ const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: Dict 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     if (typeof window === "undefined") return "zh";
-    const v = window.localStorage.getItem("lang");
-    return v === "en" ? "en" : "zh";
+    return detectLang(); // 手动选过的优先;否则中文环境中文、其他地区英文
   });
   useEffect(() => {
     try { window.localStorage.setItem("lang", lang); } catch { /* noop */ }
     document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
   }, [lang]);
+  setCurrentLang(lang); // 纯函数(itemLabel 等)读当前语言
   return (
     <LangCtx.Provider value={{ lang, setLang: setLangState, t: DICT[lang] }}>
       {children}

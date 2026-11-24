@@ -4,8 +4,15 @@
 
 const THRESHOLD = 5;
 
+// 错题掌握进度按【账号】隔离:同一设备上不同账号各自独立,互不影响。
+// 由 App 在鉴权初始化/切换时调用 setMasteryUser 设置当前用户;未登录用 "anon"。
+let currentUid = "anon";
+export function setMasteryUser(uid: string | null | undefined) {
+  currentUid = uid || "anon";
+}
+
 export function masteryKey(game: string) {
-  return `mistake-mastery:${game}`;
+  return `mistake-mastery:${currentUid}:${game}`;
 }
 
 export function problemKey(signs: string[], terms: number[], answer: number) {

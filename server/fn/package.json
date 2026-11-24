@@ -1,0 +1,11 @@
+{
+  "name": "zhuxiang-fn",
+  "private": true,
+  "type": "module",
+  "description": "自建服务器上的云函数运行器(netlify/functions 原样运行)",
+  "scripts": {
+    "prepare-fn": "node prepare.mjs",
+    "start": "node server.mjs",
+    "test": "node test.mjs"
+  }
+}

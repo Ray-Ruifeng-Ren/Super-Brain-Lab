@@ -3,6 +3,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { submitScore, formatTime } from "@/lib/leaderboard";
 import { RotateCcw } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { getLang } from "@/lib/langState";
+
+// 英文界面(2026-10-27):L(中文, 英文) 按当前语言取;主组件 useI18n() 订阅语言,切换即重渲染
+const L = (zh: string, en: string) => (getLang() === "en" ? en : zh);
 
 function shuffle(n: number) {
   const arr = Array.from({ length: n }, (_, i) => i + 1);
@@ -14,6 +19,7 @@ function shuffle(n: number) {
 }
 
 export function SchulteGame({ size, onFinished }: { size: number; onFinished?: () => void }) {
+  useI18n();
   const total = size * size;
   const [numbers, setNumbers] = useState<number[]>(() => shuffle(total));
   const [next, setNext] = useState(1);
@@ -70,11 +76,11 @@ export function SchulteGame({ size, onFinished }: { size: number; onFinished?: (
     <div className="flex flex-col items-center gap-5">
       <div className="flex w-full items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">用时</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("用时", "Time")}</span>
           <span className="font-mono-tabular text-4xl font-semibold text-foreground">{formatTime(display)}</span>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">下一个</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("下一个", "Next")}</span>
           <span className="font-mono-tabular text-4xl font-semibold">
             {finishedMs != null ? "✓" : next}
             <span className="text-base text-muted-foreground"> / {total}</span>
@@ -115,16 +121,16 @@ export function SchulteGame({ size, onFinished }: { size: number; onFinished?: (
 
       {finishedMs != null ? (
         <div className="w-full animate-slide-up rounded-md border border-border bg-card p-5 text-center">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">完成</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{L("完成", "Done")}</div>
           <div className="my-1 font-mono-tabular text-5xl font-semibold text-primary">{formatTime(finishedMs)}</div>
-          <Button onClick={reset} className="mt-3"><RotateCcw className="mr-1.5 h-3.5 w-3.5" /> 再来一局</Button>
+          <Button onClick={reset} className="mt-3"><RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {L("再来一局", "Play again")}</Button>
         </div>
       ) : !startAt ? (
         <div className="text-center text-sm text-muted-foreground">
-          点击数字 <span className="font-mono-tabular font-semibold text-foreground">1</span> 开始计时
+          {L("点击数字", "Tap")} <span className="font-mono-tabular font-semibold text-foreground">1</span> {L("开始计时", "to start the timer")}
         </div>
       ) : (
-        <Button variant="ghost" size="sm" onClick={reset}><RotateCcw className="mr-1.5 h-3.5 w-3.5" /> 重置</Button>
+        <Button variant="ghost" size="sm" onClick={reset}><RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {L("重置", "Reset")}</Button>
       )}
     </div>
   );

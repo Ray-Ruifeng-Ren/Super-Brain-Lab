@@ -4,6 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dayKey, streakFromDays, rankBy } from "@/lib/rankUtils";
+import { mulD, divisionD } from "@/lib/difficulty";
 
 export type GameId = "flashmath" | "abacus" | "schulte" | "reaction" | "nback" | "cards" | "orbit" | "gauntlet";
 export type ScoreDirection = "lower" | "higher";
@@ -195,17 +196,27 @@ export async function submitScore(input: {
   value: number;
   meta?: Record<string, unknown>;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return { ok: false, error: "未登录" };
-  const { error } = await supabase.from("scores").insert({
-    user_id: u.user.id,
+  // 用本地会话判断登录 —— getSession() 读取本地存储的会话(必要时自动刷新 token),不走网络
+  // 用户校验。这避免了「多场 / 快速连续提交」时 getUser() 的网络竞态导致的间歇性「未登录」。
+  const { data: s } = await supabase.auth.getSession();
+  const user = s.session?.user;
+  if (!user) return { ok: false, error: "未登录" };
+  const row = {
+    user_id: user.id,
     game: input.game,
     mode: input.mode,
-    value: input.value,
+    value: Number.isFinite(input.value) ? input.value : 0, // 兜底:极端配置若算出 NaN/Infinity 也不至于插入失败
     meta: (input.meta ?? {}) as any,
-  });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  };
+  // 瞬时网络错误自动重试一次,尽量不丢成绩。
+  let lastErr = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { error } = await supabase.from("scores").insert(row);
+    if (!error) return { ok: true };
+    lastErr = error.message;
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 500));
+  }
+  return { ok: false, error: lastErr || "提交失败" };
 }
 
 interface RawScore {
@@ -382,8 +393,33 @@ export function formatRelative(iso: string): string {
 
 // ===== 项目榜单:难度系数榜 + 坚持榜(均按 mode 前缀区分项目) =====
 export interface RankRow { user_id: string; nickname: string; rank: number; }
-export interface DiffRankRow extends RankRow { D: number; }
+export type OpKind = "addsub" | "mul" | "div";
+export interface DiffRankRow extends RankRow { D: number; mode: string; op: OpKind; speedMs?: number; createdAt?: string; }
 export interface StreakRankRow extends RankRow { streak: number; days: number; }
+
+/** 从 mode 串识别运算类型(加减 / 乘 / 除)。加减:含 "Nq-";乘:"-mul-AxB";除:新 "-div-DdQq"(除数d商q) 或旧 "-div-A_B"(被除数_除数)。 */
+export function opFromMode(mode: string): OpKind {
+  if (/-mul-\d+x\d+/.test(mode)) return "mul";
+  if (/-div-\d+(?:d\d+q|_\d+)/.test(mode)) return "div";
+  return "addsub";
+}
+
+/** 旧除法 mode "-div-被除数_除数" → 换算为 { 除数位, 商位 }(商位≈被除数位−除数位+1)。 */
+export function legacyDivDigits(dividendDigits: number, divisorDigits: number): { d: number; q: number } {
+  return { d: divisorDigits, q: Math.max(1, dividendDigits - divisorDigits + 1) };
+}
+
+/** 榜单里的权威 D:乘除按 mode 内位数用当前公式重算(修正历史畸高值);加减用记录里存的 D(含作答用时)。 */
+function boardD(op: OpKind, mode: string, storedD: number): number {
+  if (op === "mul") { const m = mode.match(/-mul-(\d+)x(\d+)/); if (m) return mulD(+m[1], +m[2]); }
+  if (op === "div") {
+    const n = mode.match(/-div-(\d+)d(\d+)q/);
+    if (n) return divisionD(+n[1], +n[2]);
+    const m = mode.match(/-div-(\d+)_(\d+)/);
+    if (m) { const { d, q } = legacyDivDigits(+m[1], +m[2]); return divisionD(d, q); }
+  }
+  return storedD;
+}
 
 export interface ProjectRanks { difficulty: DiffRankRow[]; persistence: StreakRankRow[]; }
 
@@ -391,37 +427,49 @@ export interface ProjectRanks { difficulty: DiffRankRow[]; persistence: StreakRa
 export async function getProjectRanks(game: GameId, prefix: string, limit = 20): Promise<ProjectRanks> {
   const { data } = await supabase
     .from("scores")
-    .select("user_id,meta,created_at,profiles(nickname)")
+    .select("user_id,mode,meta,created_at,profiles(nickname)")
     .eq("game", game)
     .like("mode", `${prefix}%`)
     .order("created_at", { ascending: false })
     .limit(6000);
 
   const rows = (data ?? []) as unknown as {
-    user_id: string; meta: { D?: number } | null; created_at: string; profiles: { nickname: string | null } | null;
+    user_id: string; mode: string; meta: { D?: number; speedMs?: number } | null; created_at: string; profiles: { nickname: string | null } | null;
   }[];
 
-  const bestD = new Map<string, { user_id: string; nickname: string; D: number }>();
+  // 难度榜按【运算类型】隔离:同一用户在 加减 / 乘 / 除 各有独立最高分,互不干扰。key = user|op。
+  type BestEntry = { user_id: string; nickname: string; D: number; mode: string; op: OpKind; speedMs?: number; createdAt: string };
+  const bestD = new Map<string, BestEntry>();
   const byUser = new Map<string, { days: Set<string>; nickname: string }>();
 
   for (const r of rows) {
     const nickname = r.profiles?.nickname || "玩家";
-    const D = Number(r.meta?.D) || 0;
+    const op = opFromMode(r.mode);
+    const D = boardD(op, r.mode, Number(r.meta?.D) || 0);
     if (D > 0) {
-      const cur = bestD.get(r.user_id);
-      if (!cur || D > cur.D) bestD.set(r.user_id, { user_id: r.user_id, nickname, D });
+      const key = `${r.user_id}|${op}`;
+      const cur = bestD.get(key);
+      // 取最高 D;同一用户同运算多条同为最高 D 时,保留最早那条(先达成)
+      if (!cur || D > cur.D || (D === cur.D && r.created_at < cur.createdAt))
+        bestD.set(key, { user_id: r.user_id, nickname, D, mode: r.mode, op, speedMs: Number(r.meta?.speedMs) || undefined, createdAt: r.created_at });
     }
     let u = byUser.get(r.user_id);
     if (!u) { u = { days: new Set(), nickname }; byUser.set(r.user_id, u); }
     u.days.add(dayKey(r.created_at));
   }
 
-  const difficulty = rankBy(
-    [...bestD.values()],
-    (a, b) => b.D - a.D,
-    (x) => x.D,
-    limit,
-  );
+  // 难度榜:先按运算类型分组,组内 D 降序、同分先达成者靠前,各组独立名次(严格名次)。
+  const byOp = new Map<OpKind, BestEntry[]>();
+  for (const v of bestD.values()) {
+    const arr = byOp.get(v.op) ?? [];
+    arr.push(v);
+    byOp.set(v.op, arr);
+  }
+  const difficulty: DiffRankRow[] = [];
+  for (const arr of byOp.values()) {
+    arr.sort((a, b) => b.D - a.D || a.createdAt.localeCompare(b.createdAt));
+    arr.slice(0, limit).forEach((x, i) => difficulty.push({ ...x, rank: i + 1 }));
+  }
   const persistence = rankBy(
     [...byUser.entries()]
       .map(([uid, u]) => ({ user_id: uid, nickname: u.nickname, streak: streakFromDays(u.days), days: u.days.size }))

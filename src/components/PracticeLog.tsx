@@ -7,15 +7,19 @@ import {
   groupByDay,
   type AttemptRow,
 } from "@/lib/practiceLog";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   game: string;
   refreshKey?: number;
   extraTab?: React.ReactNode;
   mistakeTab?: React.ReactNode;
+  title?: string; // 项目名(如「看算」),显示为「看算训练台」;缺省仅显示「训练台」
 }
 
-export function PracticeLog({ game, refreshKey, extraTab, mistakeTab }: Props) {
+export function PracticeLog({ game, refreshKey, extraTab, mistakeTab, title }: Props) {
+  const { lang } = useI18n();
+  const en = lang === "en";
   const [rows, setRows] = useState<AttemptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState<Date>(new Date());
@@ -56,18 +60,18 @@ export function PracticeLog({ game, refreshKey, extraTab, mistakeTab }: Props) {
           <div className="flex items-center gap-1.5">
             <BookOpen className="h-3 w-3 text-muted-foreground" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              训练台
+              {en ? (title ? `${title} · Training` : "Training") : (title ? `${title}训练台` : "训练台")}
             </span>
           </div>
           <TabsList className="h-7">
             {extraTab && (
-              <TabsTrigger value="board" className="text-[11px]">排行</TabsTrigger>
+              <TabsTrigger value="board" className="text-[11px]">{en ? "Ranks" : "排行"}</TabsTrigger>
             )}
             <TabsTrigger value="log" className="text-[11px]">
-              <CalendarDays className="mr-1 h-3 w-3" /> 记录
+              <CalendarDays className="mr-1 h-3 w-3" /> {en ? "Log" : "记录"}
             </TabsTrigger>
             {mistakeTab && (
-              <TabsTrigger value="mistakes" className="text-[11px]">错题本</TabsTrigger>
+              <TabsTrigger value="mistakes" className="text-[11px]">{en ? "Mistakes" : "错题本"}</TabsTrigger>
             )}
           </TabsList>
         </div>
@@ -86,10 +90,10 @@ export function PracticeLog({ game, refreshKey, extraTab, mistakeTab }: Props) {
 
         <TabsContent value="log" className="m-0 flex-1 overflow-auto p-3">
           {loading ? (
-            <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">加载中…</div>
+            <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">{en ? "Loading…" : "加载中…"}</div>
           ) : rows.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">
-              登录后开始练习，这里会记录每一题。
+              {en ? "Log in and start practicing; every problem will be logged here." : "登录后开始练习，这里会记录每一题。"}
             </div>
           ) : (
             <div className="space-y-3">
@@ -108,16 +112,16 @@ export function PracticeLog({ game, refreshKey, extraTab, mistakeTab }: Props) {
                 />
               </div>
               <div className="rounded-md border border-border px-3 py-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">今日</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{en ? "Today" : "今日"}</div>
                 {today ? (
                   <div className="mt-0.5 flex items-baseline gap-2 text-sm">
                     <span className="font-mono-tabular text-xl font-semibold">{today.total}</span>
-                    <span className="text-[11px] text-muted-foreground">题</span>
+                    <span className="text-[11px] text-muted-foreground">{en ? "problems" : "题"}</span>
                     <span className="ml-auto text-[11px] text-primary">✓ {today.correct}</span>
                     <span className="text-[11px] text-destructive">✗ {today.wrong}</span>
                   </div>
                 ) : (
-                  <div className="mt-1 text-[11px] text-muted-foreground">还没开始练习</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">{en ? "No practice yet" : "还没开始练习"}</div>
                 )}
               </div>
             </div>

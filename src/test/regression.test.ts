@@ -4,6 +4,8 @@
 
 import { describe, it, expect } from "vitest";
 import { difficultyD, modePrefix, PROJECT_LABEL, type DiffInput } from "@/lib/difficulty";
+import { classifyStep, generateCoachProblem, allowedClasses, COACH_STAGES, termRodClasses, __resetVariantUse } from "@/lib/fingering";
+import { recordAdvisorResult, getAdvice, type AdvisorCfg } from "@/lib/advisor";
 import { generateMultiply, generateDivide } from "@/lib/abacus";
 import { buildProblem } from "@/lib/flashMath";
 import { parseSpokenNumber } from "@/lib/parseSpokenNumber";
@@ -11,8 +13,8 @@ import { rankBy, streakFromDays, dayKey } from "@/lib/rankUtils";
 
 // ---- helpers ----
 const base = (over: Partial<DiffInput> = {}): DiffInput => ({
-  mode: "flash", op: "addsub", count: 5, digits: 2, speedMs: 1000, listenSec: 1000,
-  includeSub: false, mulA: 2, mulB: 2, divA: 3, divB: 1, ...over,
+  mode: "flash", op: "addsub", count: 5, digits: 2, speedMs: 1000, listenSec: 1000, listenSpeed: 5,
+  includeSub: false, mulA: 2, mulB: 2, divD: 1, divQ: 3, ...over,
 });
 const digitsLen = (n: number) => String(Math.abs(n)).length;
 // 独立于 BigInt 的竖式字符串乘法(每步累加 ≤810,绝无精度问题),用来验证 BigInt 结果
@@ -67,12 +69,231 @@ function numberToEN(n: number): string {
 // 作答归一化(镜像自 submit 的乘除精确比较)
 const normalizeUser = (raw: string) => raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
 
+// ============ 0. AI 陪练 · 指法判类(看珠不看数) ============
+describe("指法判类 classifyStep", () => {
+  it("[F1] 直加:1+2、6+3、0+7(上5上2 也是直加)", () => {
+    expect(classifyStep(1, 2)).toBe("直加");
+    expect(classifyStep(6, 3)).toBe("直加");
+    expect(classifyStep(0, 7)).toBe("直加");
+  });
+  it("[F2] 满五加:4+3=下5去2", () => expect(classifyStep(4, 3)).toBe("满五加"));
+  it("[F3] 进位加:8+3、9+4、6+5、8+2(整颗5珠拿走不算拆)", () => {
+    expect(classifyStep(8, 3)).toBe("进位加");
+    expect(classifyStep(9, 4)).toBe("进位加");
+    expect(classifyStep(6, 5)).toBe("进位加");
+    expect(classifyStep(8, 2)).toBe("进位加");
+  });
+  it("[F4] 破五进位加:5+7、6+6、7+7、5+9(个位是整颗5珠,去补数去不动)", () => {
+    expect(classifyStep(5, 7)).toBe("破五进位加");
+    expect(classifyStep(6, 6)).toBe("破五进位加");
+    expect(classifyStep(7, 7)).toBe("破五进位加");
+    expect(classifyStep(5, 9)).toBe("破五进位加");
+  });
+  it("[F5] 直减/破五减:9−2 直减;5−3=去5还2 破五减", () => {
+    expect(classifyStep(9, -2)).toBe("直减");
+    expect(classifyStep(5, -3)).toBe("破五减");
+  });
+  it("[F6] 退位减:11−7、10−6、12−5(还的正是5珠本身,普通退位减)", () => {
+    expect(classifyStep(11, -7)).toBe("退位减");
+    expect(classifyStep(10, -6)).toBe("退位减");
+    expect(classifyStep(12, -5)).toBe("退位减");
+  });
+  it("[F7] 退位满五减:12−7、12−6、13−8(还2时下珠不够,要借5)", () => {
+    expect(classifyStep(12, -7)).toBe("退位满五减");
+    expect(classifyStep(12, -6)).toBe("退位满五减");
+    expect(classifyStep(13, -8)).toBe("退位满五减");
+  });
+  it("[F8] 看珠不看数:同是减6,10−6 退位减 vs 12−6 退位满五减", () => {
+    expect(classifyStep(10, -6)).not.toBe(classifyStep(12, -6));
+  });
+  it("[F9] 定向出题(个位):每关500题,每笔类别 ∈ 本关允许集(目标+镜像配对+直加直减),总和正确,总值不越界", () => {
+    for (const st of COACH_STAGES) {
+      const allowed = allowedClasses(st.id, 1);
+      for (let k = 0; k < 500; k++) {
+        const p = generateCoachProblem(st.id, 6);
+        let total = 0;
+        p.terms.forEach((t, i) => {
+          const d = p.signs[i] === "-" ? -t : t;
+          expect(classifyStep(total, d)).toBe(p.classes[i]);
+          expect(allowed.has(p.classes[i])).toBe(true);
+          total += d;
+          expect(total).toBeGreaterThanOrEqual(0); // 课本实证:总值中途可归零(1+4−5+9−5)
+          expect(total).toBeLessThanOrEqual(35);   // 1位课总值封顶(五族关自然≤9,进/退位关≤35)
+        });
+        expect(total).toBe(p.answer);
+        expect(p.answer).toBeGreaterThanOrEqual(1); // 但最终答案 ≥1
+      }
+    }
+  }, 15000);
+  it("[F10] 定向出题(多位数):每关100题×2/3位,每笔【每一档】的指法 ∈ 本关允许集", () => {
+    for (const st of COACH_STAGES) {
+      for (const digits of [2, 3]) {
+        const allowed = allowedClasses(st.id, digits);
+        const cap = 10 ** (digits + 1) - 1;
+        for (let k = 0; k < 100; k++) {
+          const p = generateCoachProblem(st.id, 5, digits);
+          let total = 0;
+          p.terms.forEach((t, i) => {
+            const d = p.signs[i] === "-" ? -t : t;
+            const rods = termRodClasses(total, d);
+            expect(rods).not.toBeNull();
+            for (const c of rods!) expect(allowed.has(c)).toBe(true);
+            total += d;
+            expect(total).toBeGreaterThanOrEqual(1);
+            expect(total).toBeLessThanOrEqual(cap);
+          });
+          expect(total).toBe(p.answer);
+        }
+      }
+    }
+  });
+  it("[F11] 数字分布:无数字垄断(≤20%)、1-9 全部出现(注:直加直减关里 9 只在档上为 0/9 时合法,天然偏少)", () => {
+    __resetVariantUse();
+    const tally: Record<number, number> = {};
+    let n = 0;
+    for (let k = 0; k < 300; k++) {
+      const p = generateCoachProblem(1, 8);
+      for (const t of p.terms) { tally[t] = (tally[t] ?? 0) + 1; n++; }
+    }
+    for (let x = 1; x <= 9; x++) {
+      expect(tally[x] ?? 0).toBeGreaterThan(0);
+      expect((tally[x] ?? 0) / n).toBeLessThan(0.2);
+    }
+  });
+  it("[F12] 专项构成(还没学到只用前面的):满五加关无破五减;进位加关回位用破五减/满五加;每题至少一笔目标", () => {
+    __resetVariantUse();
+    const cases: [number, string, string[]][] = [
+      [2, "满五加", ["满五加", "直加", "直减"]],
+      [4, "进位加", ["进位加", "破五减", "满五加", "直加", "直减"]],
+      [6, "退位减", ["退位减", "进位加", "破五进位加", "满五加", "破五减", "直加", "直减"]],
+    ];
+    for (const [st, target, allowed] of cases) {
+      for (let k = 0; k < 50; k++) {
+        const p = generateCoachProblem(st, 8);
+        for (const c of p.classes) expect(allowed).toContain(c);
+        expect(p.classes.filter((c) => c === target).length).toBeGreaterThan(0);
+      }
+    }
+  });
+  it("[F17] 综合滚动窗口均匀:相邻2题内单个数字出现次数 ≤ 期望+2(不许某数字扎堆)", () => {
+    for (const [count, digits] of [[5, 2], [10, 1], [5, 3]] as const) {
+      const probs = Array.from({ length: 60 }, () => buildProblem(count, digits, true));
+      const cap = Math.ceil((2 * count * digits) / 9) + 2;
+      for (let k = 0; k + 1 < probs.length; k++) {
+        const tally: Record<string, number> = {};
+        for (const p of [probs[k], probs[k + 1]]) for (const t of p.terms) for (const ch of String(t)) if (ch !== "0") tally[ch] = (tally[ch] ?? 0) + 1;
+        expect(Math.max(...Object.values(tally))).toBeLessThanOrEqual(cap);
+      }
+    }
+  });
+  it("[F16] 综合大位数(3-9位):同一个数内数字不重复(持久袋残袋回归)", () => {
+    for (const d of [3, 5, 6, 7, 9]) {
+      for (let k = 0; k < 80; k++) {
+        for (const t of buildProblem(8, d, true).terms) {
+          const ds = String(t).split("");
+          expect(new Set(ds).size).toBe(ds.length);
+          expect(ds.length).toBe(d);
+        }
+      }
+    }
+  });
+  it("[F15] 直加直减小课(1-4):包括首笔在内所有数字都 ≤4", () => {
+    __resetVariantUse();
+    for (let k = 0; k < 60; k++) {
+      const p = generateCoachProblem(1, 6, 1, [1, 2, 3, 4]);
+      for (const t of p.terms) expect(t).toBeLessThanOrEqual(4);
+    }
+  });
+  it("[F14] 变式小课:加3满五课里所有满五加都是+3;9的进位加课里所有进位加都是+9", () => {
+    __resetVariantUse();
+    for (let k = 0; k < 40; k++) {
+      const p2 = generateCoachProblem(2, 8, 1, [3]);
+      p2.classes.forEach((c, i) => { if (c === "满五加") expect(p2.terms[i]).toBe(3); });
+      expect(p2.classes.includes("满五加")).toBe(true);
+      const p4 = generateCoachProblem(4, 8, 1, [9]);
+      p4.classes.forEach((c, i) => { if (c === "进位加") expect(p4.terms[i]).toBe(9); });
+      expect(p4.classes.includes("进位加")).toBe(true);
+    }
+  });
+  it("[F13] 变式全覆盖:进位加关150题内,加1…加9 九条口诀全部出现", () => {
+    __resetVariantUse();
+    const seen = new Set<number>();
+    for (let k = 0; k < 150; k++) {
+      const p = generateCoachProblem(4, 8);
+      p.classes.forEach((c, i) => { if (c === "进位加") seen.add(p.terms[i]); });
+    }
+    for (let x = 1; x <= 9; x++) expect(seen.has(x)).toBe(true);
+  });
+});
+
+// ============ 0.5 AI 教练进阶梯子(付海东 2026-09-12 口径) ============
+describe("综合训练教练建议 getAdvice", () => {
+  const mk = (over: Partial<AdvisorCfg>): AdvisorCfg => ({ mode: "flash", op: "addsub", digits: 2, digitsMax: 2, includeSub: true, speedMs: 1000, count: 10, ...over });
+  const feed = (cfg: AdvisorCfg, n = 20) => { window.localStorage.removeItem("flashmath:advisor"); window.localStorage.removeItem("flashmath:classStats"); for (let i = 0; i < n; i++) recordAdvisorResult(cfg, true); };
+  it("[A1] 二位·10笔·1秒·全对 → 毕业:升三位、笔数回5、时间放宽", () => {
+    const cfg = mk({});
+    feed(cfg);
+    const a = getAdvice(cfg)!;
+    expect(a.patch.digits).toBe(3);
+    expect(a.patch.count).toBe(5);
+    expect(a.patch.speedMs).toBeGreaterThan(1000);
+  });
+  it("[A2] 三位·15笔·0.9秒·全对 → 升四位(全位数同构)", () => {
+    const cfg = mk({ digits: 3, digitsMax: 3, count: 15, speedMs: 900 });
+    feed(cfg);
+    const a = getAdvice(cfg)!;
+    expect(a.patch.digits).toBe(4);
+    expect(a.patch.count).toBe(5);
+  });
+  it("[A3] 二位·5笔·全对 → 先建议笔数提到10(毕业要求10~15笔)", () => {
+    const cfg = mk({ count: 5 });
+    feed(cfg);
+    expect(getAdvice(cfg)!.patch.count).toBe(10);
+  });
+  it("[A4] 二位·10笔·1.5秒·全对 → 建议压时间(未到1秒不毕业)", () => {
+    const cfg = mk({ speedMs: 1500 });
+    feed(cfg);
+    const a = getAdvice(cfg)!;
+    expect(a.patch.speedMs).toBeLessThan(1500);
+    expect(a.patch.digits).toBeUndefined();
+  });
+  it("[A5] 准确率不足80%不给进阶建议", () => {
+    const cfg = mk({});
+    window.localStorage.removeItem("flashmath:advisor"); window.localStorage.removeItem("flashmath:classStats");
+    for (let i = 0; i < 20; i++) recordAdvisorResult(cfg, i % 4 !== 0); // 75%
+    const a = getAdvice(cfg);
+    expect(a?.patch.digits).toBeUndefined();
+  });
+});
+
 // ============ 1. 难度系数模型 difficultyD ============
 describe("难度系数 D", () => {
-  it("[01] 乘法 2×2 = 2.6", () => expect(difficultyD(base({ op: "mul", mulA: 2, mulB: 2 }))).toBe(2.6));
-  it("[02] 乘法位数越多 D 越大", () =>
-    expect(difficultyD(base({ op: "mul", mulA: 4, mulB: 4 }))).toBeGreaterThan(difficultyD(base({ op: "mul", mulA: 2, mulB: 2 }))));
-  it("[03] 除法 3÷1 = 2.6", () => expect(difficultyD(base({ op: "div", divA: 3, divB: 1 }))).toBe(2.6));
+  it("[01] 乘法 2×2 = 13.0(次线性,范围与加减同量级)", () => expect(difficultyD(base({ op: "mul", mulA: 2, mulB: 2 }))).toBe(13.0));
+  it("[02] 乘法位数越多 D 越大,但不爆四位数", () => {
+    expect(difficultyD(base({ op: "mul", mulA: 4, mulB: 4 }))).toBeGreaterThan(difficultyD(base({ op: "mul", mulA: 2, mulB: 2 })));
+    expect(difficultyD(base({ op: "mul", mulA: 10, mulB: 10 }))).toBeLessThan(1000);
+  });
+  it("[03] 除法 除1位商3位 = 12.3(v2:只看除数和商)", () => expect(difficultyD(base({ op: "div", divD: 1, divQ: 3 }))).toBe(12.3));
+  it("[03a] 除法排序:除2商2 > 除1商2 > 除2商1(商权重1.5倍)", () => {
+    const D = (d: number, q: number) => difficultyD(base({ op: "div", divD: d, divQ: q }));
+    expect(D(2, 2)).toBeGreaterThan(D(1, 2));
+    expect(D(1, 2)).toBeGreaterThan(D(2, 1));
+    expect(D(2, 3)).toBeGreaterThan(D(3, 2));
+    expect(D(3, 2)).toBeGreaterThan(D(2, 2));
+    expect(D(5, 6)).toBeGreaterThan(D(6, 5));
+    expect(D(6, 5)).toBeGreaterThan(D(5, 5));
+  });
+  it("[03b] 除法与被除数无关:被除数同为10位时,除5商6 远难于 除8商3", () => {
+    const D = (d: number, q: number) => difficultyD(base({ op: "div", divD: d, divQ: q }));
+    expect(D(5, 6)).toBeGreaterThan(D(8, 3) * 1.5);
+  });
+  it("[03c] 乘法5位分水岭:4×6/7/8 仍递增但增幅小于5位以内", () => {
+    const M = (a: number, b: number) => difficultyD(base({ op: "mul", mulA: a, mulB: b }));
+    expect(M(4, 6)).toBeGreaterThan(M(4, 5));
+    expect(M(4, 7)).toBeGreaterThan(M(4, 6));
+    expect(M(4, 8)).toBeGreaterThan(M(4, 7));
+    expect(M(4, 8) - M(4, 7)).toBeLessThan(M(4, 5) - M(4, 4)); // 超5位后边际收窄
+  });
   it("[04] op 优先于 mode:听算·乘 与 看算·乘 同配置 D 相等", () =>
     expect(difficultyD(base({ mode: "listen", op: "mul", mulA: 3, mulB: 3 })))
       .toBe(difficultyD(base({ mode: "glance", op: "mul", mulA: 3, mulB: 3 }))));
@@ -87,8 +308,8 @@ describe("难度系数 D", () => {
     expect(difficultyD(base({ includeSub: false }))).toBe(1.6);
     expect(difficultyD(base({ includeSub: true }))).toBe(2.1);
   });
-  it("[10] 听算:每笔时间越短 D 越大", () =>
-    expect(difficultyD(base({ mode: "listen", listenSec: 500 }))).toBeGreaterThan(difficultyD(base({ mode: "listen", listenSec: 1000 }))));
+  it("[10] 听算:速度档越高 D 越大(按速度衡量,不按时间)", () =>
+    expect(difficultyD(base({ mode: "listen", listenSpeed: 10 }))).toBeGreaterThan(difficultyD(base({ mode: "listen", listenSpeed: 1 }))));
   it("[11] 看算:作答越快 D 越大;usedMs=0 有兜底不为 0", () => {
     expect(difficultyD(base({ mode: "glance" }), 500)).toBeGreaterThan(difficultyD(base({ mode: "glance" }), 2000));
     expect(difficultyD(base({ mode: "glance" }), 0)).toBeGreaterThan(0);
@@ -325,5 +546,172 @@ describe("听算读数与作答归一化", () => {
     expect(numberToEN(1000)).toBe("one thousand");
     expect(numberToEN(1234)).toBe("one thousand two hundred thirty-four");
     expect(numberToEN(9876543210)).toBe("nine billion eight hundred seventy-six million five hundred forty-three thousand two hundred ten");
+  });
+});
+
+// F18 答案分散(2026-09-12 用户实测「满五加答案都是5」修复):
+// 连续出题时答案不能扎堆 —— 尤其②满五加(末笔收割天然只有5-8四个落点)。
+describe("F18 陪练答案分散", () => {
+  it("②满五加 10笔:最高频答案占比 ≤35%,相邻同答案 ≤5%", () => {
+    __resetVariantUse();
+    const n = 150;
+    const dist = new Map<number, number>();
+    let dup = 0;
+    let prev = -1;
+    for (let i = 0; i < n; i++) {
+      const p = generateCoachProblem(2, 10, 1, null);
+      dist.set(p.answer, (dist.get(p.answer) ?? 0) + 1);
+      if (p.answer === prev) dup += 1;
+      prev = p.answer;
+    }
+    const top = Math.max(...dist.values());
+    expect(top / n).toBeLessThanOrEqual(0.35);
+    expect(dup / n).toBeLessThanOrEqual(0.05);
+    expect(dist.size).toBeGreaterThanOrEqual(5); // 答案至少覆盖 5 种值
+  });
+
+  it("②满五加 5笔:最高频答案占比 ≤35%", () => {
+    __resetVariantUse();
+    const n = 150;
+    const dist = new Map<number, number>();
+    for (let i = 0; i < n; i++) {
+      const p = generateCoachProblem(2, 5, 1, null);
+      dist.set(p.answer, (dist.get(p.answer) ?? 0) + 1);
+    }
+    expect(Math.max(...dist.values()) / n).toBeLessThanOrEqual(0.35);
+  });
+});
+
+// F19 直加直减反「镜像回吐」(2026-09-12 用户反馈「光出9减9、7减7」):
+// +x 紧跟 −x 的抵消对基本禁绝(仅未覆盖变式放行一次),且百题变式全覆盖不受影响。
+describe("F19 ①关反镜像回吐", () => {
+  it("①直加直减 200题:紧邻 +x−x 抵消对 ≤1%,百题内18变式全覆盖", () => {
+    __resetVariantUse();
+    let undo = 0, strokes = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const p = generateCoachProblem(1, 5, 1, null);
+      for (let k = 1; k < p.terms.length; k++) {
+        strokes += 1;
+        if (p.terms[k] === p.terms[k - 1] && p.signs[k] !== p.signs[k - 1]) undo += 1;
+      }
+      if (i < 100) {
+        for (let k = 0; k < p.terms.length; k++) seen.add(p.signs[k] + p.terms[k]);
+      }
+    }
+    expect(undo / strokes).toBeLessThanOrEqual(0.01);
+    for (let x = 1; x <= 9; x++) {
+      expect(seen.has(`+${x}`), `+${x} 未覆盖`).toBe(true);
+      expect(seen.has(`-${x}`), `-${x} 未覆盖`).toBe(true);
+    }
+  });
+});
+
+// F20 陪练进度账号级同步(2026-09-12「空山账号 27/100 不更新」——原为设备本地存储):
+// 云端答题序列 → 各关窗口/通关状态的纯合并逻辑。
+describe("F20 陪练进度云端重建", () => {
+  it("窗口取末100题、任意连续100题≥80%判通关、与本地取更长者", async () => {
+    const { mergeCloudCoachProgress } = await import("@/lib/fingering");
+    window.localStorage.removeItem("flashmath:coach");
+    // 27 题(对20) → recent 27;120 题前 100 全对 → 通关
+    const seq: { stage: number; correct: boolean }[] = [];
+    for (let i = 0; i < 27; i++) seq.push({ stage: 2, correct: i < 20 });
+    for (let i = 0; i < 120; i++) seq.push({ stage: 1, correct: i < 100 });
+    const p = mergeCloudCoachProgress(seq);
+    expect(p.recent[2].length).toBe(27);
+    expect(p.recent[2].filter(Boolean).length).toBe(20);
+    expect(p.passed).toContain(1);
+    expect(p.passed).not.toContain(2);
+    expect(p.recent[1].length).toBe(100);
+    // 本地窗口更长时保留本地(未登录练习不丢)
+    const p2 = mergeCloudCoachProgress([{ stage: 2, correct: true }]);
+    expect(p2.recent[2].length).toBe(27);
+    window.localStorage.removeItem("flashmath:coach");
+  });
+});
+
+// 2026-10-21 学生反馈:布置 2-4 位,10 题里有一题最多只有 3 位 → 区间内每种位数都必须出现
+describe("混合位数:区间内每种位数至少出现一次", () => {
+  it("2-4 位 14 笔:每题都含 2、3、4 位", () => {
+    for (let k = 0; k < 400; k++) {
+      const p = buildProblem(14, 2, true, 4);
+      const lens = new Set(p.terms.map((t) => String(t).length));
+      expect([...lens].sort()).toEqual([2, 3, 4]);
+      expect(p.terms.length).toBe(14);
+    }
+  });
+  it("笔数少于位数种类时也保住最大位数", () => {
+    for (let k = 0; k < 200; k++) {
+      const p = buildProblem(2, 1, false, 5);
+      expect(Math.max(...p.terms.map((t) => String(t).length))).toBe(5);
+    }
+  });
+});
+
+// 2026-10-25 用户:多位混合数「两位、三位、四位要均匀分布,不要扎堆」
+import { spreadLens, mixedLens, maxRun } from "@/lib/spreadLens";
+describe("多位混合数均匀分布", () => {
+  it("比例允许时同位数互不相邻;比例悬殊时最多两两相邻", () => {
+    for (let k = 0; k < 500; k++) {
+      expect(maxRun(spreadLens({ 2: 5, 3: 5, 4: 4 }))).toBe(1);
+      expect(maxRun(spreadLens({ 6: 2, 5: 2, 4: 5, 3: 6 }))).toBe(1);
+      // 2026-10-26 某种位数占多数时允许比最少多 1 行连着(官方鉴定样卷也有三行连着),换来顺序不固定
+      expect(maxRun(spreadLens({ 4: 5, 3: 10 }))).toBeLessThanOrEqual(3);
+      expect(maxRun(spreadLens({ 2: 4, 1: 2 }))).toBeLessThanOrEqual(3);
+    }
+  });
+  it("2-4 位 14 笔:各位数行数相差不超过 1,且不扎堆;题目各笔位数与之一致", () => {
+    for (let k = 0; k < 300; k++) {
+      const lens = mixedLens(14, 2, 4);
+      const c = [2, 3, 4].map((d) => lens.filter((x) => x === d).length);
+      expect(Math.max(...c) - Math.min(...c)).toBeLessThanOrEqual(1);
+      expect(maxRun(lens)).toBe(1);
+      const p = buildProblem(14, 2, true, 4);
+      expect(maxRun(p.terms.map((t) => String(t).length))).toBe(1);
+    }
+  });
+});
+
+// 2026-10-26 付海东「位数顺序都是固定的,每次第一个数都是 3 位」→ 位数顺序要随机(仍不相邻)
+describe("多位混合数顺序随机", () => {
+  it("开头位数、整列顺序每次不同;同位数仍不相邻", () => {
+    const firsts = new Set<number>(), orders = new Set<string>();
+    for (let k = 0; k < 200; k++) {
+      const s = spreadLens({ 3: 5, 4: 5, 5: 3, 6: 2 });
+      expect(maxRun(s)).toBe(1);
+      firsts.add(s[0]); orders.add(s.join(""));
+    }
+    expect(firsts.size).toBeGreaterThanOrEqual(3);
+    expect(orders.size).toBeGreaterThan(150);
+  });
+});
+
+it("比例悬殊(10×3位 + 5×4位):开头位数也会变,最长连续段 ≤ 3", () => {
+  const firsts = new Set<number>();
+  for (let k = 0; k < 200; k++) { const s = spreadLens({ 3: 10, 4: 5 }); expect(maxRun(s)).toBeLessThanOrEqual(3); expect(s.length).toBe(15); firsts.add(s[0]); }
+  expect(firsts.size).toBe(2);
+});
+
+it("鉴定占多数的位数(珠心算三级 2位6行+3位2行):顺序每题不同,最长连续 ≤ 3", () => {
+  const orders = new Set<string>();
+  for (let k = 0; k < 200; k++) { const s = spreadLens({ 2: 6, 3: 2 }); expect(maxRun(s)).toBeLessThanOrEqual(3); expect(s.length).toBe(8); orders.add(s.join("")); }
+  expect(orders.size).toBeGreaterThanOrEqual(5);
+});
+
+// 2026-10-26 教练端/学生端与出题系统统一的规则(《鉴定标准》拟题要求)
+describe("闪电心算 / 作业加减:同列上下不同数码、尾数 0 每题 ≤ 2 行", () => {
+  it("定长与混合位数都满足", () => {
+    for (let k = 0; k < 300; k++) {
+      for (const [n, d, dm] of [[10, 3, 3], [15, 4, 4], [12, 2, 4], [8, 1, 1], [10, 5, 7]] as const) {
+        const p = buildProblem(n, d, k % 2 === 0, dm);
+        const ds = p.terms.map((t) => String(t));
+        ds.forEach((x, i) => {
+          if (!i) return;
+          const u = ds[i - 1];
+          for (let r = 1; r <= Math.min(u.length, x.length); r++) expect(x[x.length - r], `${u} / ${x}`).not.toBe(u[u.length - r]);
+        });
+        if (d > 1) expect(p.terms.filter((t) => t % 10 === 0).length, ds.join(",")).toBeLessThanOrEqual(2);
+      }
+    }
   });
 });

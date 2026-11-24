@@ -6,7 +6,11 @@ import { SchulteGame } from "@/components/games/SchulteGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
 import { FlashMathGame, type FlashCfg, type FlashMode } from "@/components/games/FlashMathGame";
 import { AbacusGame } from "@/components/games/AbacusGame";
+import { BeadTrain } from "@/components/games/BeadTrain";
+import { ScrollTrain } from "@/components/games/ScrollTrain";
+import { ObstacleTrain } from "@/components/games/ObstacleTrain";
 import { DEFAULT_ABACUS_CFG, abacusMode, type AbacusCfg, type AbacusMode, type Project } from "@/lib/abacus";
+import { useEffect } from "react";
 import { NBackGame } from "@/components/games/NBackGame";
 import { CardMemoryGame } from "@/components/games/CardMemoryGame";
 import { OrbitFocusGame } from "@/components/games/OrbitFocusGame";
@@ -17,17 +21,18 @@ import { RankBoards } from "@/components/RankBoards";
 import { modePrefix } from "@/lib/difficulty";
 import { AccountMenu } from "@/components/AccountMenu";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
+import { EyeCareToggle } from "@/components/EyeCareToggle";
 import { PracticeLog } from "@/components/PracticeLog";
 import { MistakeBook } from "@/components/MistakeBook";
 import { PracticeStats } from "@/components/PracticeStats";
-import Embers from "@/components/hero/Embers";
 import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { PROJECT_TILES } from "@/components/ProjectTiles";
 
 const Play = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const [searchParams] = useSearchParams();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const modeParam = searchParams.get("mode");
   const projectParam = searchParams.get("project");
@@ -40,8 +45,11 @@ const Play = () => {
   const initialAbacusProject: Project | undefined =
     projectParam === "multiply" || projectParam === "divide" || projectParam === "bead" ? projectParam : undefined;
   const [refreshKey, setRefreshKey] = useState(0);
+  const [panel, setPanel] = useState<"train" | "board">("train"); // 底部第 5 个 tab:排行榜 + 数据(2026-10-13)
+  type BoardProject = "flash" | "listen" | "glance" | "bead" | "scroll" | "obstacle";
+  const [boardProject, setBoardProject] = useState<BoardProject>("flash"); // 排行榜顶部可切换看哪个项目
   const [schulteSize, setSchulteSize] = useState(4);
-  const [flashCfg, setFlashCfg] = useState<FlashCfg>({ mode: flashInitialMode ?? "flash", op: "addsub", count: 5, digits: 2, speedMs: 700, listenSec: 1000, listenLang: "zh", includeSub: false, rounds: 1, mulA: 2, mulB: 2, divA: 3, divB: 1 });
+  const [flashCfg, setFlashCfg] = useState<FlashCfg>({ mode: flashInitialMode ?? "flash", op: "addsub", count: 5, digits: 2, digitsMax: 2, method: "mental", listenVoice: "female", speedMs: 700, flashScale: 1, listenSec: 800, listenSpeed: 5, announcePlus: true, announceUnit: true, listenLang: "zh", glanceLimitSec: 0, includeSub: false, rounds: 1, mulA: 2, mulB: 2, divD: 1, divQ: 3, divEnough: "any", decimals: false, decimalPlaces: 2 });
   const [flashMistakeMode, setFlashMistakeMode] = useState(false);
   const [abacusCfg, setAbacusCfg] = useState<AbacusCfg>(DEFAULT_ABACUS_CFG);
   const [abacusMistakeMode, setAbacusMistakeMode] = useState(false);
@@ -55,8 +63,8 @@ const Play = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">游戏不存在</p>
-          <Link to="/" className="mt-3 inline-block text-primary underline">返回广场</Link>
+          <p className="text-muted-foreground">{lang === "en" ? "Game not found" : "游戏不存在"}</p>
+          <Link to="/" className="mt-3 inline-block text-primary underline">{lang === "en" ? "Back to home" : "返回广场"}</Link>
         </div>
       </div>
     );
@@ -77,12 +85,69 @@ const Play = () => {
 
   const isAbacus = game.id === "abacus";
   const isFlash = game.id === "flashmath";
+  const isScrollPage = isAbacus && projectParam === "scroll"; // 心算马拉松(2026-10-14):与数珠互译同款单页训练台
+  const isObstaclePage = isAbacus && projectParam === "obstacle"; // 障碍算(2026-10-15)
+  const isBeadPage = isAbacus && (initialAbacusProject === "bead" || isScrollPage || isObstaclePage);
+  useEffect(() => { setBoardProject(isObstaclePage ? "obstacle" : isScrollPage ? "scroll" : isBeadPage ? "bead" : ((flashCfg.mode ?? flashInitialMode ?? "flash") as BoardProject)); }, [isBeadPage, isScrollPage, isObstaclePage, flashCfg.mode, flashInitialMode]);
   const flashPrefix = modePrefix(flashCfg.mode ?? flashInitialMode ?? "flash");
+  // 训练台标题里的项目名:闪电心算 / 看算 / 听算(随呈现方式)
+  const FLASH_NAMES = lang === "en" ? ({ flash: "Flash Math", glance: "Glance", listen: "Listen" } as const) : ({ flash: "闪电心算", glance: "看算", listen: "听算" } as const);
+  const flashModeName = FLASH_NAMES[flashCfg.mode ?? flashInitialMode ?? "flash"];
+  // 顶部面包屑:闪电心算页随「呈现方式 + 运算」动态显示,而非恒为「闪电心算」
+  const flashTitle = () => {
+    const m = FLASH_NAMES[flashCfg.mode ?? "flash"];
+    const o = (lang === "en" ? ({ addsub: "", mul: " · Multiply", div: " · Divide" } as const) : ({ addsub: "", mul: " · 乘法", div: " · 除法" } as const))[flashCfg.op ?? "addsub"];
+    return m + o;
+  };
+  const headerTitle = isFlash ? flashTitle() : isScrollPage ? (lang === "en" ? "Mental Marathon" : "心算马拉松") : isObstaclePage ? (lang === "en" ? "Obstacle" : "障碍算") : (t.games[game.id]?.name ?? game.name);
+
+  // 排行榜 + 数据面板(底部第 5 个 tab):顶部切换项目(2026-10-13 用户要求)
+  const beadBoardMode = abacusMode({ ...DEFAULT_ABACUS_CFG, project: "bead", beadDigits: abacusCfg.project === "bead" ? abacusCfg.beadDigits : DEFAULT_ABACUS_CFG.beadDigits });
+  const boardPanel = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-6 gap-2">
+        {PROJECT_TILES.map((pt) => (
+          <button key={pt.id} onClick={() => setBoardProject(pt.id as BoardProject)}
+            className={cn("hp-leather flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-bold transition-transform hover:-translate-y-0.5", boardProject === pt.id && "hp-leather-on")}>
+            <span>{pt.emoji}</span>{lang === "en" ? pt.en : pt.zh}
+          </button>
+        ))}
+      </div>
+      {boardProject === "scroll" || boardProject === "obstacle" ? (
+        <>
+          <PracticeStats game="flashmath" refreshKey={refreshKey} />
+          <div className="hp-card min-h-[420px] p-3 md:p-4">
+            <PracticeLog game="flashmath" refreshKey={refreshKey} title={boardProject === "scroll" ? (lang === "en" ? "Mental Marathon" : "心算马拉松") : (lang === "en" ? "Obstacle" : "障碍算")} />
+          </div>
+        </>
+      ) : boardProject === "bead" ? (
+        <>
+          <PracticeStats game="abacus" refreshKey={refreshKey} />
+          <div className="hp-card min-h-[420px] p-3 md:p-4">
+            <PracticeLog game="abacus" refreshKey={refreshKey} title={lang === "en" ? "Beads" : "数珠互译"}
+              extraTab={<ProLeaderboard game="abacus" mode={beadBoardMode} refreshKey={refreshKey} />}
+              mistakeTab={<MistakeBook game="abacus" refreshKey={refreshKey} mistakeMode={abacusMistakeMode} onMistakeModeChange={setAbacusMistakeMode} />} />
+          </div>
+        </>
+      ) : (
+        <>
+          <PracticeStats game="flashmath" refreshKey={refreshKey} />
+          <div className="hp-card min-h-[420px] p-3 md:p-4">
+            <PracticeLog game="flashmath" refreshKey={refreshKey} title={FLASH_NAMES[boardProject]}
+              extraTab={<RankBoards game="flashmath" prefix={modePrefix(boardProject)} refreshKey={refreshKey} op={flashCfg.op ?? "addsub"} />}
+              mistakeTab={<MistakeBook game="flashmath" refreshKey={refreshKey} mistakeMode={flashMistakeMode} onMistakeModeChange={setFlashMistakeMode} />} />
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Background is the global cinematic video (rendered in App) — same on every page. */}
-      <header className={cn("sticky top-0 z-30", isAbacus ? "border-b-0 bg-transparent" : "border-b border-border bg-background/80 backdrop-blur")}>
+    // overflow-x-clip 而非 overflow-hidden:hidden 会让页面成为滚动容器,配置页的 sticky 开始按钮失效
+    <div className="relative min-h-screen overflow-x-clip">
+      {/* 2026-10-13 与首页/教练端统一:训练页用羊皮纸底(珠算首页保留童话场景) */}
+      {!(isAbacus && !isBeadPage) && <div aria-hidden className="paper-bg pointer-events-none fixed inset-0 z-0" />}
+      <header className={cn("sticky top-0 z-30", isAbacus && !isBeadPage ? "border-b-0 bg-transparent" : "border-b border-[#B8925A]/40 bg-[#FBF5E6]/85 backdrop-blur")}>
         <div className="container flex items-center justify-between py-3">
           <button
             onClick={() => navigate("/")}
@@ -90,22 +155,18 @@ const Play = () => {
           >
             <ArrowLeft className="h-3.5 w-3.5" /> {t.arena}
             <span className="ml-1 text-muted-foreground/60">/</span>
-            <span className="ml-1 text-foreground">{t.games[game.id]?.name ?? game.name}</span>
+            <span className="ml-1 text-foreground">{headerTitle}</span>
           </button>
           <div className="flex items-center gap-2">
             {isFlash && <BackgroundPicker />}
+            <EyeCareToggle />
             <LanguageToggle />
             <AccountMenu />
           </div>
         </div>
       </header>
 
-      <main className={cn("container py-2 md:py-3", isAbacus && "relative z-10", isFlash && "flash-warm")}>
-        {game.id === "flashmath" && (
-          <div className="mb-2">
-            <PracticeStats game="flashmath" refreshKey={refreshKey} />
-          </div>
-        )}
+      <main className={cn("container relative z-10 py-2 md:py-3", (isFlash || isBeadPage) && "pb-28")}>
 
         {game.id === "abacus" && abacusView === "train" && (
           <div className="mb-2">
@@ -115,7 +176,7 @@ const Play = () => {
 
         {game.id === "schulte" && (
           <div className="mb-5 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">难度</span>
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{lang === "en" ? "Size" : "难度"}</span>
             {[3, 4, 5, 6].map((s) => (
               <button
                 key={s}
@@ -134,13 +195,11 @@ const Play = () => {
         )}
 
         {isFlash ? (
-          /* 闪电心算:配置 + 训练台 靠左堆叠;火花是背景的一部分,露在右侧空白区 */
           <div className="relative">
-            <Embers />
-            <div className="relative z-10">
-              {/* 配置 = 主区:整幅宽度、更大更醒目 */}
-              <div className="fw-panel rounded-2xl border border-border bg-card/80 p-4 shadow-lg backdrop-blur md:p-6">
+            {panel === "train" ? (
+              <div className="hp-card p-5 md:p-8">
                 <FlashMathGame
+                  key={flashInitialMode ?? "flash"}
                   onFinished={handleFinished}
                   onCfgChange={setFlashCfg}
                   mistakeMode={flashMistakeMode}
@@ -148,28 +207,10 @@ const Play = () => {
                   initialMode={flashInitialMode}
                 />
               </div>
-              {/* 训练台:靠左排布,角色/火花露在右侧空白区 */}
-              <div className="mt-3 lg:pr-[34%]">
-              <div className="fw-panel min-h-[420px] rounded-2xl border border-border bg-card/80 p-3 backdrop-blur md:p-4">
-                <PracticeLog
-                  game="flashmath"
-                  refreshKey={refreshKey}
-                  extraTab={<RankBoards game={game.id} prefix={flashPrefix} refreshKey={refreshKey} />}
-                  mistakeTab={
-                    <MistakeBook
-                      game="flashmath"
-                      refreshKey={refreshKey}
-                      mistakeMode={flashMistakeMode}
-                      onMistakeModeChange={setFlashMistakeMode}
-                    />
-                  }
-                />
-              </div>
-              </div>
-            </div>
+            ) : boardPanel}
           </div>
         ) : (
-        <div className={cn("grid gap-3", isAbacus && abacusView === "home" ? "" : "lg:grid-cols-[1fr_560px]")}>
+        <div className={cn("grid gap-3", isAbacus && abacusView === "home" ? "" : isBeadPage ? "" : "lg:grid-cols-[1fr_560px]")}>
           <div className={cn("flex flex-col", isAbacus ? "" : "rounded-md border border-border bg-card p-3 md:p-4")}>
             {game.id === "schulte" && <SchulteGame size={schulteSize} onFinished={handleFinished} />}
             {game.id === "reaction" && <ReactionGame onFinished={handleFinished} />}
@@ -181,7 +222,10 @@ const Play = () => {
                 onMistakeModeChange={setFlashMistakeMode}
               />
             )}
-            {game.id === "abacus" && (
+            {game.id === "abacus" && initialAbacusProject === "bead" && (panel === "board" ? boardPanel : <BeadTrain onFinished={handleFinished} onCfgChange={setAbacusCfg} />)}
+            {isScrollPage && (panel === "board" ? boardPanel : <ScrollTrain onFinished={handleFinished} />)}
+            {isObstaclePage && (panel === "board" ? boardPanel : <ObstacleTrain onFinished={handleFinished} />)}
+            {game.id === "abacus" && initialAbacusProject !== "bead" && !isScrollPage && !isObstaclePage && (
               <AbacusGame
                 onFinished={handleFinished}
                 onCfgChange={setAbacusCfg}
@@ -197,7 +241,7 @@ const Play = () => {
             {game.id === "orbit" && <OrbitFocusGame onFinished={handleFinished} />}
             {game.id === "gauntlet" && <GauntletFlashGame onFinished={handleFinished} onCfgChange={setGauntletCfg} />}
           </div>
-          {!(isAbacus && abacusView === "home") && (
+          {!(isAbacus && abacusView === "home") && !isBeadPage && (
           <aside className="space-y-3 lg:flex lg:flex-col">
             {game.id === "orbit" && (
               <div className="flex flex-wrap items-center gap-1">
@@ -210,7 +254,7 @@ const Play = () => {
                       : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  PFI 通榜
+                  {lang === "en" ? "PFI overall" : "PFI 通榜"}
                 </button>
                 {Array.from({ length: 10 }).map((_, i) => {
                   const m = `L${i + 1}`;
@@ -242,7 +286,7 @@ const Play = () => {
                       : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  GFI 通榜
+                  {lang === "en" ? "GFI overall" : "GFI 通榜"}
                 </button>
                 <button
                   onClick={() => setGauntletView("current")}
@@ -254,7 +298,7 @@ const Play = () => {
                   )}
                   title={encodeMode(gauntletCfg)}
                 >
-                  当前配置榜
+                  {lang === "en" ? "This setup" : "当前配置榜"}
                 </button>
               </div>
             )}
@@ -263,7 +307,8 @@ const Play = () => {
                 <PracticeLog
                   game="flashmath"
                   refreshKey={refreshKey}
-                  extraTab={<RankBoards game={game.id} prefix={flashPrefix} refreshKey={refreshKey} />}
+                  title={flashModeName}
+                  extraTab={<RankBoards game={game.id} prefix={flashPrefix} refreshKey={refreshKey} op={flashCfg.op ?? "addsub"} />}
                   mistakeTab={
                     <MistakeBook
                       game="flashmath"
@@ -298,6 +343,27 @@ const Play = () => {
         </div>
         )}
       </main>
+
+      {/* 底部四个项目大按钮(2026-10-13 与教练端演示一致):在训练页里直接切换 闪算/听算/看算/数珠互译 */}
+      {(isFlash || isBeadPage) && (
+        <nav className="safe-b fixed inset-x-0 bottom-0 z-30 border-t border-[#B8925A]/40 bg-[#FBF5E6]/90 backdrop-blur">
+          <div className="proj-nav container grid max-w-6xl grid-cols-7 gap-1.5 py-3 sm:gap-2">
+            {PROJECT_TILES.map((pt) => {
+              const on = panel === "train" && (pt.id === "bead" ? isAbacus && !isScrollPage && !isObstaclePage : pt.id === "scroll" ? isScrollPage : pt.id === "obstacle" ? isObstaclePage : isFlash && (flashCfg.mode ?? flashInitialMode ?? "flash") === pt.id);
+              return (
+                <button key={pt.id} onClick={() => { setPanel("train"); navigate(pt.href); }}
+                  className={cn("hp-leather flex items-center justify-center gap-1.5 rounded-2xl py-3 text-sm font-black transition-transform hover:-translate-y-0.5 sm:py-4 sm:text-lg", on && "hp-leather-on")}>
+                  <span className="text-xl">{pt.emoji}</span>{lang === "en" ? pt.en : pt.zh}
+                </button>
+              );
+            })}
+            <button onClick={() => setPanel((p) => (p === "board" ? "train" : "board"))}
+              className={cn("hp-leather flex items-center justify-center gap-1.5 rounded-2xl py-3 text-sm font-black transition-transform hover:-translate-y-0.5 sm:py-4 sm:text-lg", panel === "board" && "hp-leather-on")}>
+              <span className="text-xl">🏆</span>{lang === "en" ? "Ranks" : "排行榜"}
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 };

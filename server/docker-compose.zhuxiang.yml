@@ -1,0 +1,35 @@
+# 珠象在 Supabase 官方自建栈之上加的两个服务。和官方 docker-compose.yml 一起用:
+#   cd /srv/zhuxiang/supabase/docker
+#   docker compose -f docker-compose.yml -f /srv/zhuxiang/app/docker-compose.zhuxiang.yml up -d
+# 变量(ANON_KEY / SERVICE_ROLE_KEY 等)读的是官方目录里的 .env,由 scripts/setup-server.sh 生成。
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: zhuxiang-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /srv/zhuxiang/www:/srv/www:ro
+      - /srv/zhuxiang/app/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /srv/zhuxiang/certs:/etc/nginx/certs:ro
+      - /srv/zhuxiang/acme:/var/www/acme:ro
+    depends_on:
+      - kong
+      - fn
+
+  fn:
+    build: /srv/zhuxiang/app/fn
+    container_name: zhuxiang-fn
+    restart: unless-stopped
+    environment:
+      SUPABASE_INTERNAL_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE: ${SERVICE_ROLE_KEY}
+      BLOBS_DIR: /data/blobs
+      TZ: Asia/Shanghai
+    volumes:
+      - /srv/zhuxiang/blobs:/data/blobs
+    depends_on:
+      - kong
